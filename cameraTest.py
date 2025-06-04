@@ -15,7 +15,7 @@ def get_camera():
         # Rapsberry Pi
         picam2 = Picamera2()
         print(type(picam2.preview_configuration))
-        config = picam2.preview_configuration(main={"format": "RGB888"})
+        config = picam2.preview_configuration
         print("debug")
         picam2.configure(config)
         picam2.start()
@@ -41,7 +41,7 @@ def get_camera():
 def main():
     for frame in get_camera():
         cv2.imshow("camera", frame)
-        if cv2.waitKey(1) and 0xFF == 27:
+        if cv2.waitKey(1) & 0xFF == 27:
             break
         
     cv2.destroyAllWindows()
