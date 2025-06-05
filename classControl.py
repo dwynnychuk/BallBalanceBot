@@ -1,3 +1,7 @@
+from logger import get_logger
+
+logger = get_logger(__name__)
+
 class PID:
     def __init__(self, gains):
         self.kp = gains[0]

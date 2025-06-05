@@ -1,5 +1,8 @@
 import cv2
 import numpy as np
+from logger import get_logger
+
+logger = get_logger(__name__)
 
 class Camera:
     def __init__(self):

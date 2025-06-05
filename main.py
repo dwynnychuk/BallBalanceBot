@@ -2,8 +2,10 @@ import classCamera
 import classControl
 import classRobot
 import classServo
+from logger import get_logger
 
-# mock servo implementation
+logger = get_logger(__name__)
+
 servos = classServo.init_servos(10)
 
 def main():

@@ -1,4 +1,7 @@
 import platform
+from logger import get_logger
+
+logger = get_logger(__name__)
 
 def check_rpi() -> bool:
     return platform.system() == "Linux"
