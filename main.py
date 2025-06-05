@@ -4,12 +4,11 @@ import classRobot
 import classServo
 
 # mock servo implementation
-servo0 = classServo.Servo(0)
-servo1 = classServo.Servo(1)
-classServo.home_position([servo0, servo1])
+servos = classServo.init_servos(10)
 
 def main():
     cam = classCamera.Camera()
+    cam.show_camera()
     
 if __name__ == "__main__":
     main()
