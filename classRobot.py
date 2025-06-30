@@ -12,7 +12,7 @@ class Robot:
     
     def kinematics_inv(self, nVec: list[float], h: float) -> list[float]:
         # Arm 01
-        b1x = None      # Need to finish substitution
+        b1x = (self.L[3]*nVec[2])/sqrt(nVec[0]**2 + nVec[2]**2)
         b1y = 0
         b1z = h - (nVec[0]*self.L[3])/sqrt(nVec[2]**2+nVec[0]**2)
         

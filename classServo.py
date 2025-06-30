@@ -44,7 +44,7 @@ def home_all(servos: list) -> None:
     for servo in servos:
         servo.reset()
     
-def init_servos(num_servos) -> None:
+def init_servos(num_servos=3) -> None:
     try:
         if is_pi:
             servo_hat = ServoKit(channels = 16)
