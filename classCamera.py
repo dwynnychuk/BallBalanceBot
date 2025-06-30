@@ -11,6 +11,7 @@ class Camera:
         self.hsv_orange_upper = np.array([25, 255, 255])    # need to tune after cad 
         self.kernel_shape = (21,21)
         self.contour_area_threshold = 10000
+        self.radius_threshold = [50, 400]
         self.kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,self.kernel_shape)
         try:
             from picamera2 import Picamera2
@@ -61,8 +62,13 @@ class Camera:
             for contour in contours:
                 area = cv2.contourArea(contour)
                 if area > self.contour_area_threshold:
-                    print(area)
-            cv2.imshow("masked_open_closed_image", mask)
+                    (x,y), radius = cv2.minEnclosingCircle(contour)
+                    center = (int(x), int(y))
+                    radius = int(radius)
+                    if self.radius_threshold[0] < radius < self.radius_threshold[1]:
+                        cv2.circle(frame, center, radius,(0, 0, 255),3)
+                        print(f"Center of Ball: {center}, with Radius: {radius}")
+            cv2.imshow("frame_with_ball", frame)
             if cv2.waitKey(1) & 0xFF == 27:
                 break
             
