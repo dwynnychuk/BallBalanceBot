@@ -1,6 +1,8 @@
 import cv2
 import numpy as np
+import threading
 from logger import get_logger
+import time
 
 logger = get_logger(__name__)
 
@@ -13,6 +15,10 @@ class Camera:
         self.contour_area_threshold = 10000
         self.radius_threshold = [50, 400]
         self.kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,self.kernel_shape)
+        self.latest_ball_pos = None
+        self.t0 = time.time()
+        self.tn1 = time.time()-1
+        self.latest_frame = None
         try:
             from picamera2 import Picamera2
             self.PiCameraAvailable = True
@@ -21,6 +27,9 @@ class Camera:
         except:
             self.PiCameraAvailable = False
 
+    @property
+    def delta_t(self):
+        return self.t0-self.tn1
 
     def _get_camera(self):
         if self.PiCameraAvailable:
@@ -51,16 +60,19 @@ class Camera:
                 yield frame
             cap.release()
 
-    def capture_camera(self):
+    def _capture_camera(self):
         for frame in self._get_camera():
-            for ball in self.process_image(frame):
-                if ball:
-                    print(f"Ball Coordinates: {ball[0], ball[1]} with Radius: {ball[2]}")
-            if cv2.waitKey(1) & 0xFF == 27:
-                break
+            self.latest_frame = frame
+            ball = self._process_image(frame)
+            self.latest_ball_pos = ball
+            
         cv2.destroyAllWindows()
 
-    def process_image(self, frame):
+    def start(self):
+        thread = threading.Thread(None,target=self._capture_camera, daemon=True)
+        thread.start()
+
+    def _process_image(self, frame):
         hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
         mask = cv2.inRange(hsv,self.hsv_orange_lower, self.hsv_orange_upper)
         mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, self.kernel)
@@ -79,16 +91,25 @@ class Camera:
                 if self.radius_threshold[0] < radius < self.radius_threshold[1]:
                     cv2.circle(frame, center, radius,(0, 0, 255),3)
                     cv2.circle(frame, center, 5, (255,0,0),10)  # draw point at middle of ball
-                    cv2.imshow("frame", frame)
                     ball = [center[0], center[1], radius]
-                    break
-        cv2.imshow("frame", frame)
-        
-        yield ball
+                    self.tn1 = self.t0
+                    self.t0 = time.time()
+                    return ball
+        return ball
 
     def get_ball_position(self):
         return self.latest_ball_pos
 
 if __name__ == "__main__":
     cam = Camera()
-    cam.capture_camera()
+    cam.start()
+    
+    while True:
+        frame = cam.latest_frame
+        if frame is not None:
+            cv2.imshow("frame", cam.latest_frame)
+            if cam.get_ball_position():
+                print(f"Ball POS: {cam.get_ball_position()}, TIME: {cam.delta_t}")
+        if cv2.waitKey(1) & 0xFF == 27:
+            break
+            
