@@ -15,6 +15,8 @@ class Camera:
         try:
             from picamera2 import Picamera2
             self.PiCameraAvailable = True
+            self.picam2 = Picamera2()
+
         except:
             self.PiCameraAvailable = False
 
@@ -22,7 +24,7 @@ class Camera:
     def _get_camera(self):
         if self.PiCameraAvailable:
             # Rapsberry Pi
-            picam2 = Picamera2()
+            picam2 = self.picam2
             config = picam2.preview_configuration
             picam2.configure(config)
             picam2.start()
