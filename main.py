@@ -10,7 +10,7 @@ servos = classServo.init_servos(10)
 
 def main():
     cam = classCamera.Camera()
-    cam.show_camera()
+    cam.capture_camera()
     
 if __name__ == "__main__":
     main()

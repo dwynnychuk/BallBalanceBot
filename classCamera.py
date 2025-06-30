@@ -51,32 +51,44 @@ class Camera:
                 yield frame
             cap.release()
 
-    def show_camera(self):
+    def capture_camera(self):
         for frame in self._get_camera():
-            # Pre-processing
-            hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-            mask = cv2.inRange(hsv,self.hsv_orange_lower, self.hsv_orange_upper)
-            mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, self.kernel)
-            mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, self.kernel)
-            #print("HSV at center:", hsv[hsv.shape[0]//2, hsv.shape[1]//2])
-            
-            # Detect Blobs to find contour of ball
-            contours, _ =cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-            for contour in contours:
-                area = cv2.contourArea(contour)
-                if area > self.contour_area_threshold:
-                    (x,y), radius = cv2.minEnclosingCircle(contour)
-                    center = (int(x), int(y))
-                    radius = int(radius)
-                    if self.radius_threshold[0] < radius < self.radius_threshold[1]:
-                        cv2.circle(frame, center, radius,(0, 0, 255),3)
-                        print(f"Center of Ball: {center}, with Radius: {radius}")
-            cv2.imshow("frame_with_ball", frame)
+            for ball in self.process_image(frame):
+                if ball:
+                    print(f"Ball Coordinates: {ball[0], ball[1]} with Radius: {ball[2]}")
             if cv2.waitKey(1) & 0xFF == 27:
                 break
-            
         cv2.destroyAllWindows()
+
+    def process_image(self, frame):
+        hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+        mask = cv2.inRange(hsv,self.hsv_orange_lower, self.hsv_orange_upper)
+        mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, self.kernel)
+        mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, self.kernel)
+        #print("HSV at center:", hsv[hsv.shape[0]//2, hsv.shape[1]//2])
         
+        # Detect Blobs to find contour of ball
+        contours, _ =cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        ball = None
+        for contour in contours:
+            area = cv2.contourArea(contour)
+            if area > self.contour_area_threshold:
+                (x,y), radius = cv2.minEnclosingCircle(contour)
+                center = (int(x), int(y))
+                radius = int(radius)
+                if self.radius_threshold[0] < radius < self.radius_threshold[1]:
+                    cv2.circle(frame, center, radius,(0, 0, 255),3)
+                    cv2.circle(frame, center, 5, (255,0,0),10)  # draw point at middle of ball
+                    cv2.imshow("frame", frame)
+                    ball = [center[0], center[1], radius]
+                    break
+        cv2.imshow("frame", frame)
+        
+        yield ball
+
+    def get_ball_position(self):
+        return self.latest_ball_pos
+
 if __name__ == "__main__":
     cam = Camera()
-    cam.show_camera()
+    cam.capture_camera()
