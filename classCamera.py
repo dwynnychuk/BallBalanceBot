@@ -68,8 +68,8 @@ class Camera:
             if not self.running:
                 break
             self.latest_frame = frame
-            ball = self._process_image(frame)
-            self.latest_ball_pos = ball
+            processed = self._process_image(frame)
+            self.latest_ball_pos = self._find_ball(processed, unprocessed=frame)
             
         cv2.destroyAllWindows()
 
@@ -84,9 +84,11 @@ class Camera:
         mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, self.kernel)
         mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, self.kernel)
         #print("HSV at center:", hsv[hsv.shape[0]//2, hsv.shape[1]//2])
-        
-        # Detect Blobs to find contour of ball
-        contours, _ =cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        return mask
+    
+    def _find_ball(self, frame, unprocessed = None):
+        """Detect Blobs to find contour of ball"""
+        contours, _ = cv2.findContours(frame, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         ball = None
         for contour in contours:
             area = cv2.contourArea(contour)
@@ -95,13 +97,14 @@ class Camera:
                 center = (int(x), int(y))
                 radius = int(radius)
                 if self.radius_threshold[0] < radius < self.radius_threshold[1]:
-                    cv2.circle(frame, center, radius,(0, 0, 255),3)
-                    cv2.circle(frame, center, 5, (255,0,0),10)  # draw point at middle of ball
+                    if unprocessed is not None:
+                        cv2.circle(unprocessed, center, radius,(0, 0, 255),3)
+                        cv2.circle(unprocessed, center, 5, (255,0,0),10)  # draw point at middle of ball
                     ball = [center[0], center[1], radius]
                     self.tn1 = self.t0
                     self.t0 = time.time()
                     return ball
-        return ball
+        return ball 
 
     def get_ball_position(self):
         return self.latest_ball_pos
@@ -121,5 +124,4 @@ if __name__ == "__main__":
             break
             
 # to do
-# break out image processing from ball finding
 # get max contour instead of looping through all
