@@ -19,6 +19,8 @@ class Camera:
         self.t0 = time.time()
         self.tn1 = time.time()-1
         self.latest_frame = None
+        self.running = True
+        
         try:
             from picamera2 import Picamera2
             self.PiCameraAvailable = True
@@ -42,7 +44,7 @@ class Camera:
             picam2.configure(config)
             picam2.start()
 
-            while True:
+            while self.running:
                 frame_rgb = picam2.capture_array()
                 frame_bgr = cv2.cvtColor(frame_rgb, cv2.COLOR_RGB2BGR)
                 yield frame_bgr
@@ -50,18 +52,21 @@ class Camera:
             # Mac
             cap = cv2.VideoCapture(0)
             if not cap.isOpened():
+                logger.error("Cannot Open Webcam")
                 raise RuntimeError("Cannot Open Webcam")
             
-            while True:
+            while self.running:
                 ret, frame = cap.read()
                 if not ret:
-                    print("Failed to get frame")
+                    logger.error("Failed to get frame")
                     break
                 yield frame
             cap.release()
 
     def _capture_camera(self):
         for frame in self._get_camera():
+            if not self.running:
+                break
             self.latest_frame = frame
             ball = self._process_image(frame)
             self.latest_ball_pos = ball
@@ -71,6 +76,7 @@ class Camera:
     def start(self):
         thread = threading.Thread(None,target=self._capture_camera, daemon=True)
         thread.start()
+        logger.debug("Camera Thread Started")
 
     def _process_image(self, frame):
         hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
@@ -109,7 +115,11 @@ if __name__ == "__main__":
         if frame is not None:
             cv2.imshow("frame", cam.latest_frame)
             if cam.get_ball_position():
-                print(f"Ball POS: {cam.get_ball_position()}, TIME: {cam.delta_t}")
+                logger.debug(f"Ball POS: {cam.get_ball_position()}, TIME: {cam.delta_t}")
         if cv2.waitKey(1) & 0xFF == 27:
+            cam.running = False
             break
             
+# to do
+# break out image processing from ball finding
+# get max contour instead of looping through all

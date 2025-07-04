@@ -18,9 +18,10 @@ def main():
         if frame is not None:
             cv2.imshow("frame", cam.latest_frame)
             if cam.get_ball_position():
-                print(f"Ball POS: {cam.get_ball_position()}, TIME: {cam.delta_t}")
+                logger.debug(f"Ball POS: {cam.get_ball_position()}, TIME: {cam.delta_t}")
 
         if cv2.waitKey(1) & 0xFF == 27:
+            cam.running = False
             break
         cv2.destroyAllWindows()
     
