@@ -1,4 +1,4 @@
-import cv2
+import cv2 as cv
 import numpy as np
 import threading
 from logger import get_logger
@@ -9,12 +9,12 @@ logger = get_logger(__name__)
 class Camera:
     def __init__(self):
         # import picamera2 only if used on raspberry pi
-        self.hsv_orange_lower = np.array([2, 120, 70])      # need to tune after cad complete
-        self.hsv_orange_upper = np.array([25, 255, 255])    # need to tune after cad 
+        self.hsv_lower = np.array([20, 120, 120])      # need to tune after cad complete
+        self.hsv_upper = np.array([30, 255, 255])    # need to tune after cad 
         self.kernel_shape = (21,21)
         self.contour_area_threshold = 10000
         self.radius_threshold = [50, 400]
-        self.kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,self.kernel_shape)
+        self.kernel = cv.getStructuringElement(cv.MORPH_ELLIPSE,self.kernel_shape)
         self.latest_ball_pos = None
         self.t0 = time.time()
         self.tn1 = time.time()-1
@@ -28,6 +28,19 @@ class Camera:
 
         except:
             self.PiCameraAvailable = False
+            
+    def _read_calibration_data(self, camType):
+        if camType == "MAC":
+            dist = np.array([-8.49216396e-03,3.08034351e-01, -3.88908240e-03, 1.96616800e-04, -8.78991630e-01])
+            cam = np.array([[1.41705209e+03, 0.00000000e+00, 9.60026636e+02],
+                            [0.00000000e+00, 1.41704256e+03, 5.45224992e+02],
+                            [0.00000000e+00, 0.00000000e+00, 1.00000000e+00]])
+            
+        elif camType == "PI":
+            dist = np.zeros((1,5))
+            cam = np.zeros((3,3))
+            
+        return dist, cam
 
     @property
     def delta_t(self):
@@ -36,6 +49,8 @@ class Camera:
     def _get_camera(self):
         if self.PiCameraAvailable:
             # Rapsberry Pi
+            self.distCoefs, self.camMat = self._read_calibration_data("PI")
+            
             picam2 = self.picam2
             
             config = picam2.create_preview_configuration(main={"size": (800, 800)},
@@ -46,11 +61,12 @@ class Camera:
 
             while self.running:
                 frame_rgb = picam2.capture_array()
-                frame_bgr = cv2.cvtColor(frame_rgb, cv2.COLOR_RGB2BGR)
+                frame_bgr = cv.cvtColor(frame_rgb, cv.COLOR_RGB2BGR)
                 yield frame_bgr
         else:
             # Mac
-            cap = cv2.VideoCapture(0)
+            self.distCoefs, self.camMat = self._read_calibration_data("MAC")
+            cap = cv.VideoCapture(0)
             if not cap.isOpened():
                 logger.error("Cannot Open Webcam")
                 raise RuntimeError("Cannot Open Webcam")
@@ -71,7 +87,7 @@ class Camera:
             processed = self._process_image(frame)
             self.latest_ball_pos = self._find_ball(processed, unprocessed=frame)
             
-        cv2.destroyAllWindows()
+        cv.destroyAllWindows()
 
     def start(self):
         thread = threading.Thread(None,target=self._capture_camera, daemon=True)
@@ -79,27 +95,27 @@ class Camera:
         logger.debug("Camera Thread Started")
 
     def _process_image(self, frame):
-        hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-        mask = cv2.inRange(hsv,self.hsv_orange_lower, self.hsv_orange_upper)
-        mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, self.kernel)
-        mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, self.kernel)
-        #print("HSV at center:", hsv[hsv.shape[0]//2, hsv.shape[1]//2])
+        hsv = cv.cvtColor(frame, cv.COLOR_BGR2HSV)
+        mask = cv.inRange(hsv,self.hsv_lower, self.hsv_upper)
+        mask = cv.morphologyEx(mask, cv.MORPH_OPEN, self.kernel)
+        mask = cv.morphologyEx(mask, cv.MORPH_CLOSE, self.kernel)
+        #logger.debug("HSV at center:", hsv[hsv.shape[0]//2, hsv.shape[1]//2])
         return mask
     
     def _find_ball(self, frame, unprocessed = None):
         """Detect Blobs to find contour of ball"""
-        contours, _ = cv2.findContours(frame, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        contours, _ = cv.findContours(frame, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
         ball = None
         for contour in contours:
-            area = cv2.contourArea(contour)
+            area = cv.contourArea(contour)
             if area > self.contour_area_threshold:
-                (x,y), radius = cv2.minEnclosingCircle(contour)
+                (x,y), radius = cv.minEnclosingCircle(contour)
                 center = (int(x), int(y))
                 radius = int(radius)
                 if self.radius_threshold[0] < radius < self.radius_threshold[1]:
                     if unprocessed is not None:
-                        cv2.circle(unprocessed, center, radius,(0, 0, 255),3)
-                        cv2.circle(unprocessed, center, 5, (255,0,0),10)  # draw point at middle of ball
+                        cv.circle(unprocessed, center, radius,(0, 0, 255),3)
+                        cv.circle(unprocessed, center, 5, (255,0,0),10)  # draw point at middle of ball
                     ball = [center[0], center[1], radius]
                     self.tn1 = self.t0
                     self.t0 = time.time()
@@ -116,12 +132,10 @@ if __name__ == "__main__":
     while True:
         frame = cam.latest_frame
         if frame is not None:
-            cv2.imshow("frame", cam.latest_frame)
+            cv.imshow("frame", cam.latest_frame)
             if cam.get_ball_position():
                 logger.debug(f"Ball POS: {cam.get_ball_position()}, TIME: {cam.delta_t}")
-        if cv2.waitKey(1) & 0xFF == 27:
+        if cv.waitKey(1) & 0xFF == 27:
             cam.running = False
             break
             
-# to do
-# get max contour instead of looping through all
