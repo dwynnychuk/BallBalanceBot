@@ -17,15 +17,16 @@ else:
     logger.debug("No Pi Detected: Adafruit Servo Kit not imported")
 
 class Servo:
-    def __init__(self, id, kit):
+    def __init__(self, id, kit, homeAngle = 90):
         self.id = id
         self.kit = kit
         self.minAngle = 0
         self.maxAngle = 180
-        self.homeAngle = 90
+        self.homeAngle = homeAngle
+        self.currentAngle = None
         logger.debug(f"ID: {self.id} Instantiated")
         
-    def rotate(self, position):
+    def rotate_absolute(self, position):
         if position < self.minAngle:
             logger.warning(f"Demanded Angle of {position} on Servo {self.id} Less than minimum!")
         elif position > self.maxAngle:
@@ -37,6 +38,7 @@ class Servo:
     
     def reset(self):
         logger.debug(f"Homed Servo {self.id} to {self.homeAngle}")
+        self.currentAngle = self.homeAngle
         if self.kit:
             self.kit.servo[self.id].angle = self.homeAngle
 

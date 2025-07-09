@@ -59,10 +59,13 @@ class Camera:
             picam2.configure(config)
             picam2.start()
 
-            while self.running:
-                frame_rgb = picam2.capture_array()
-                frame_bgr = cv.cvtColor(frame_rgb, cv.COLOR_RGB2BGR)
-                yield frame_bgr
+            try:
+                while self.running:
+                    frame_rgb = picam2.capture_array()
+                    frame_bgr = cv.cvtColor(frame_rgb, cv.COLOR_RGB2BGR)
+                    yield frame_bgr
+            finally:
+                picam2.stop()
         else:
             # Mac
             self.distCoefs, self.camMat = self._read_calibration_data("MAC")
@@ -71,13 +74,15 @@ class Camera:
                 logger.error("Cannot Open Webcam")
                 raise RuntimeError("Cannot Open Webcam")
             
-            while self.running:
-                ret, frame = cap.read()
-                if not ret:
-                    logger.error("Failed to get frame")
-                    break
-                yield frame
-            cap.release()
+            try:
+                while self.running:
+                    ret, frame = cap.read()
+                    if not ret:
+                        logger.error("Failed to get frame")
+                        break
+                    yield frame
+            finally:
+                cap.release()
 
     def _capture_camera(self):
         for frame in self._get_camera():
@@ -90,9 +95,14 @@ class Camera:
         cv.destroyAllWindows()
 
     def start(self):
-        thread = threading.Thread(None,target=self._capture_camera, daemon=True)
-        thread.start()
+        self.thread = threading.Thread(None,target=self._capture_camera, daemon=True)
+        self.thread.start()
         logger.debug("Camera Thread Started")
+        
+    def stop(self):
+        self.running = False
+        if self.PiCameraAvailable:
+            self.picam2.stop()
 
     def _process_image(self, frame):
         hsv = cv.cvtColor(frame, cv.COLOR_BGR2HSV)
@@ -114,6 +124,7 @@ class Camera:
                 radius = int(radius)
                 if self.radius_threshold[0] < radius < self.radius_threshold[1]:
                     if unprocessed is not None:
+                        #cv.drawContours(unprocessed,contour, -1, (255,255,0),4)
                         cv.circle(unprocessed, center, radius,(0, 0, 255),3)
                         cv.circle(unprocessed, center, 5, (255,0,0),10)  # draw point at middle of ball
                     ball = [center[0], center[1], radius]
@@ -128,14 +139,16 @@ class Camera:
 if __name__ == "__main__":
     cam = Camera()
     cam.start()
-    
-    while True:
-        frame = cam.latest_frame
-        if frame is not None:
-            cv.imshow("frame", cam.latest_frame)
-            if cam.get_ball_position():
-                logger.debug(f"Ball POS: {cam.get_ball_position()}, TIME: {cam.delta_t}")
-        if cv.waitKey(1) & 0xFF == 27:
-            cam.running = False
-            break
+    try:
+        while True:
+            frame = cam.latest_frame
+            if frame is not None:
+                cv.imshow("frame", cam.latest_frame)
+                if cam.get_ball_position():
+                    logger.debug(f"Ball POS: {cam.get_ball_position()}, TIME: {cam.delta_t}")
+            if cv.waitKey(1) & 0xFF == 27:
+                break
+    finally:
+        cam.stop()
+        cv.destroyAllWindows()
             

@@ -12,17 +12,18 @@ def main():
     servos = classServo.init_servos(10)
     cam = classCamera.Camera()
     cam.start()
-    
-    while True:
-        frame = cam.latest_frame
-        if frame is not None:
-            cv.imshow("frame", cam.latest_frame)
-            if cam.get_ball_position():
-                logger.debug(f"Ball POS: {cam.get_ball_position()}, TIME: {cam.delta_t}")
+    try:
+        while True:
+            frame = cam.latest_frame
+            if frame is not None:
+                cv.imshow("frame", cam.latest_frame)
+                if cam.get_ball_position():
+                    logger.debug(f"Ball POS: {cam.get_ball_position()}, TIME: {cam.delta_t}")
 
-        if cv.waitKey(1) & 0xFF == 27:
-            cam.running = False
-            break
+            if cv.waitKey(1) & 0xFF == 27:
+                break
+    finally:
+        cam.stop()
         cv.destroyAllWindows()
     
 if __name__ == "__main__":
