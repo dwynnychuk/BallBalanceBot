@@ -21,7 +21,7 @@ class Servo:
         self.id = id
         self.kit = kit
         self.minAngle = 0
-        self.maxAngle = 180
+        self.maxAngle = 90
         self.homeAngle = homeAngle
         self.currentAngle = None
         logger.debug(f"ID: {self.id} Instantiated")
