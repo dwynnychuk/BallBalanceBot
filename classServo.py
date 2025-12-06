@@ -48,10 +48,16 @@ def home_all(servos: list) -> None:
         servo.reset()
     logger.debug("All servos homed")
     
+def initialize_servo_range(servo_hat, num_servos: int, lower_limit=500, upper_limit=2500) -> None:
+    for i in range(num_servos):
+        servo_hat.servo[i].set_pulse_width_range(lower_limit, upper_limit)
+    logger.debug(f"{num_servos} Servos pulse width limits modified to {lower_limit} -> {upper_limit}")
+
 def init_servos(num_servos=3) -> None:
     try:
         if is_pi:
             servo_hat = ServoKit(channels = 16)
+            initialize_servo_range(servo_hat, num_servos)
             logger.debug("Pi Detected: 16 Channels Initialized")
         else:
             servo_hat = None
