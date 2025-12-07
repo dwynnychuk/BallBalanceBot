@@ -18,8 +18,7 @@ def main():
             if frame is not None:
                 #cv.imshow("frame", cam.latest_frame)
                 if cam.get_ball_position():
-                    logger.debug(f"Ball POS: {cam.get_ball_position()}, TIME: {cam.delta_t}")
-
+                    pass
             if cv.waitKey(1) & 0xFF == 27:
                 break
     finally:

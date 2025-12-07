@@ -130,6 +130,7 @@ class Camera:
                     ball = [center[0], center[1], radius]
                     self.tn1 = self.t0
                     self.t0 = time.time()
+                    logger.debug(f"Ball Pos: {ball}, Time: {self.delta_t}")
                     return ball
         return ball 
 
@@ -145,7 +146,7 @@ if __name__ == "__main__":
             if frame is not None:
                 cv.imshow("frame", cam.latest_frame)
                 if cam.get_ball_position():
-                    logger.debug(f"Ball POS: {cam.get_ball_position()}, TIME: {cam.delta_t}")
+                    pass
             if cv.waitKey(1) & 0xFF == 27:
                 break
     finally:
