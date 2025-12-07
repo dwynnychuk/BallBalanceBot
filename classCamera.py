@@ -11,7 +11,7 @@ class Camera:
         # import picamera2 only if used on raspberry pi
         self.hsv_lower = np.array([20, 120, 120])      # need to tune after cad complete
         self.hsv_upper = np.array([30, 255, 255])    # need to tune after cad 
-        self.kernel_shape = (21,21)
+        self.kernel_shape = (11,11)
         self.contour_area_threshold = 10000
         self.radius_threshold = [50, 400]
         self.kernel = cv.getStructuringElement(cv.MORPH_ELLIPSE,self.kernel_shape)
