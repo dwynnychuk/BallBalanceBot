@@ -1,5 +1,6 @@
 import platform
 from logger import get_logger
+from time import sleep
 
 logger = get_logger(__name__)
 
@@ -7,7 +8,8 @@ def check_rpi() -> bool:
     logger.debug(f"Checking platform system: {platform.system()}")
     return platform.system() == "Linux"
 
-is_pi = check_rpi()
+is_pi: bool = check_rpi()
+num_servos: int = 3
 
 if is_pi:
     from adafruit_servokit import ServoKit
@@ -17,7 +19,7 @@ else:
     logger.debug("No Pi Detected: Adafruit Servo Kit not imported")
 
 class Servo:
-    def __init__(self, id, kit, homeAngle = 90):
+    def __init__(self, id: int, kit, homeAngle: int = 90):
         self.id = id
         self.kit = kit
         self.minAngle = 0
@@ -26,7 +28,14 @@ class Servo:
         self.currentAngle = None
         logger.debug(f"ID: {self.id} Instantiated")
         
-    def rotate_absolute(self, position):
+    def _run_position_offset(self, position: int) -> float:
+        """Adjust coordinate frame such that 0degrees is a horizontal arm"""
+        return 90 - position
+        
+    def rotate_absolute(self, position: int, offset: bool = True) -> None:
+        if offset:
+            position = self._run_position_offset(position)
+        
         if position < self.minAngle:
             logger.warning(f"Demanded Angle of {position} on Servo {self.id} Less than minimum!")
         elif position > self.maxAngle:
@@ -36,28 +45,35 @@ class Servo:
             if self.kit:
                 self.kit.servo[self.id].angle = position
     
-    def reset(self):
+    def reset(self) -> None:
         logger.debug(f"Homed Servo {self.id} to {self.homeAngle}")
         self.currentAngle = self.homeAngle
         if self.kit:
             self.kit.servo[self.id].angle = self.homeAngle
 
 
-def home_all(servos: list) -> None:
+def home_all(servos: list[Servo]) -> None:
     for servo in servos:
         servo.reset()
     logger.debug("All servos homed")
     
-def initialize_servo_range(servo_hat, num_servos: int, lower_limit=500, upper_limit=2500) -> None:
+def rotate_all(servos: list[Servo], angle: int, offset: bool = True) -> None:
+    n = len(servos)
+    for i in range(n):
+        servos[i].rotate_absolute(angle, offset)
+    
+    
+def _initialize_servo_range(servo_hat, num_servos: int, lower_limit=500, upper_limit=2500) -> None:
+    """Open up servo range to unlock full range of motion"""
     for i in range(num_servos):
         servo_hat.servo[i].set_pulse_width_range(lower_limit, upper_limit)
     logger.debug(f"{num_servos} Servos pulse width limits modified to {lower_limit} -> {upper_limit}")
 
-def init_servos(num_servos=3) -> None:
+def init_servos(num_servos: int) -> list:
     try:
         if is_pi:
             servo_hat = ServoKit(channels = 16)
-            initialize_servo_range(servo_hat, num_servos)
+            _initialize_servo_range(servo_hat, num_servos)
             logger.debug("Pi Detected: 16 Channels Initialized")
         else:
             servo_hat = None
@@ -68,6 +84,17 @@ def init_servos(num_servos=3) -> None:
     except Exception as e:
         print(f"Error: initializing Servos {e}")    
         logger.error(f"Error initializing servos: {e}")
+        
+def test_servos(servos: list[Servo]) -> None:
+    rotate_all(servos, 90, True)    
+    sleep(1)
+    rotate_all(servos, 0, True)
+    sleep(1)
+    for i in range(10,100,10):
+        rotate_all(servos, i, True)
+        sleep(0.1)
+    home_all()
 
 if __name__ == "__main__":
-    init_servos()
+    servos = init_servos(num_servos)
+    test_servos(servos)
