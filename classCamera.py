@@ -53,9 +53,8 @@ class Camera:
             
             picam2 = self.picam2
             
-            config = picam2.create_preview_configuration(main={"size": (800, 800)},
-                                                         raw={"size": (3280,2464)})
-            picam2.set_controls({"ScalerCrop": None})
+            config = picam2.create_video_configuration(main={"size": (1024, 768)})
+            #picam2.set_controls({"ScalerCrop": None})
             picam2.configure(config)
             picam2.start()
 

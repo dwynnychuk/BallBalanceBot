@@ -16,7 +16,7 @@ def main():
         while True:
             frame = cam.latest_frame
             if frame is not None:
-                #cv.imshow("frame", cam.latest_frame)
+                cv.imshow("frame", cam.latest_frame)
                 if cam.get_ball_position():
                     pass
             if cv.waitKey(1) & 0xFF == 27:
