@@ -81,6 +81,7 @@ def init_servos(num_servos: int) -> list:
             
         servos = [Servo(i, servo_hat) for i in range (num_servos)]
         home_all(servos)
+        return servos
     except Exception as e:
         print(f"Error: initializing Servos {e}")    
         logger.error(f"Error initializing servos: {e}")
