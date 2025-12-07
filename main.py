@@ -9,7 +9,7 @@ import cv2 as cv
 logger = get_logger(__name__)
 
 def main():
-    servos = classServo.init_servos(10)
+    servos = classServo.init_servos(3)
     cam = classCamera.Camera()
     cam.start()
     try:
