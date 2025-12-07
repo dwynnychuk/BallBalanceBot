@@ -95,11 +95,21 @@ def test_servos(servos: list[Servo]) -> None:
         rotate_all(servos, i, True)
         sleep(0.1)
     sleep(1)
-    for i in range(90, -10, -10):
+    for i in range(90, -10, -1):
         rotate_all(servos, i, True)
-        sleep(0.25)
+        sleep(0.05)
     home_all(servos)
-
+    servos[0].rotate_absolute(45, True)
+    sleep(1)
+    servos[0].rotate_absolute(0, True)
+    servos[1].rotate_absolute(45, True)
+    sleep(1)
+    servos[0].rotate_absolute(0, True)
+    servos[1].rotate_absolute(0, True)
+    servos[2].rotate_absolute(45, True)
+    sleep(1)
+    home_all(servos)
+    
 if __name__ == "__main__":
     servos = init_servos(num_servos)
     test_servos(servos)
