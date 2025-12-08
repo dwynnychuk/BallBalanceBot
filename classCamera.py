@@ -11,6 +11,7 @@ class Camera:
         # import picamera2 only if used on raspberry pi
         self.hsv_lower = np.array([20, 120, 120])      # need to tune after cad complete
         self.hsv_upper = np.array([30, 255, 255])    # need to tune after cad 
+        self.camera_fov = (1024, 768)
         self.kernel_shape = (11,11)
         self.contour_area_threshold = 10000
         self.radius_threshold = [50, 400]
@@ -53,7 +54,7 @@ class Camera:
             
             picam2 = self.picam2
             
-            config = picam2.create_video_configuration(main={"size": (1024, 768)})
+            config = picam2.create_video_configuration(main={"size": self.camera_fov})
             #picam2.set_controls({"ScalerCrop": None})
             picam2.configure(config)
             picam2.start()
@@ -136,6 +137,13 @@ class Camera:
 
     def get_ball_position(self):
         return self.latest_ball_pos
+
+    def _adjust_ball_coordinate_frame(self, ball: list) -> list:
+        x_c = int(self.camera_fov[0]/2)
+        y_c = int(self.camera_fov[1]/2)
+        x = ball[0] - x_c
+        y = ball[1] - y_c
+        return [x, y, ball[2]]        
 
 if __name__ == "__main__":
     cam = Camera()
