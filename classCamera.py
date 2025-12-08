@@ -89,7 +89,8 @@ class Camera:
                 break
             self.latest_frame = frame
             processed = self._process_image(frame)
-            self.latest_ball_pos = self._find_ball(processed, unprocessed=frame)
+            self.latest_ball_pos = self._find_ball(processed, unprocessed=frame.copy())
+            time.sleep(0.01)
             
         cv.destroyAllWindows()
 
