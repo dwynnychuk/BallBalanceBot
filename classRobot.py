@@ -64,14 +64,14 @@ class Robot:
         bj3y = (sqrt(3)*L[3]*nVec[2])/sqrt(4*nVec[2]**2 - (nVec[0] + sqrt(3)*nVec[1])**2)
         bj3z = h - ((nVec[0] + sqrt(3)*nVec[1])*L[3])/sqrt((nVec[0] + sqrt(3)*nVec[1])**2 - 4*nVec[2]**2)
 
-        A_3 = 0
-        B_3 = 0
-        C_3 = 0
-        D_3 = 0
-        E_3 = 0
+        A_3 = -(bj3x + sqrt(3)*bj3y + 2*L[2])/bj3z
+        B_3 = (bj3x**2 + bj3y**2 + bj3z**2 + L[1]**2 - L[0]**2 - L[2]**2)/(2*bj3z)
+        C_3 = A_3**2 + 4
+        D_3 = 2*A_3*B_3 + 4*L[2]
+        E_3 = B_3**2 + L[2]**2 - L[1]**2
         
-        pj3x = 0
-        pj3y = 0
-        pj3z = 0
+        pj3x = (-D_3 - sqrt(D_3**2 - 4*C_3*E_3))/(2*C_3)
+        pj3y = sqrt(3)*pj3x
+        pj3z = sqrt(L[1]**2 - 4*pj3x**2 - 4*L[2]*pj3x - L[2]**2)
         
-        theta_3 = degrees(0)
+        theta_3 = degrees(atan2(pj3z, (sqrt(pj3x**2 + pj3y**2) - L[2])))
