@@ -33,9 +33,10 @@ class Robot:
         PZ = sqrt(L[0]**2 - (PX - (L[1] + L[2]))**2)
         
         # Arm 01
-        bj1x = (L[3]*nVec[2])/sqrt(nVec[0]**2 + nVec[2]**2)
+        bj_denom_1 = sqrt(nVec[0]**2 + nVec[2]**2)
+        bj1x = (L[3]*nVec[2])/bj_denom_1
         bj1y = 0
-        bj1z = h - (nVec[0]*L[3])/sqrt(nVec[2]**2+nVec[0]**2)
+        bj1z = h - (nVec[0]*L[3])/bj_denom_1
         
         A_1 = (L[2] - bj1x)/bj1z
         B_1 = (bj1x**2 + bj1y**2 + bj1z**2 + L[1]**2 - L[0]**2 - L[2]**2) / 2*bj1z
@@ -55,9 +56,10 @@ class Robot:
         
         
         # Arm 02
-        bj2x = (L[3]*nVec[2])/sqrt(4*nVec[2]**2 - (nVec[0] - sqrt(3)*nVec[1])**2)
-        bj2y = -(sqrt(3)*L[3]*nVec[2])/sqrt(4*nVec[2]**2 - (nVec[0] - sqrt(3)*nVec[1])**2)
-        bj2z = h - ((nVec[0] - sqrt(3)*nVec[1])*L[3])/sqrt((nVec[0] - sqrt(3)*nVec[1])**2 - 4*nVec[2]**2)
+        bj_denom_2 = sqrt(4*nVec[2]**2 + nVec[0]**2 + 3*nVec[1]**2 - 2*sqrt(3)*nVec[0]*nVec[1])
+        bj2x = -(L[3]*nVec[2])/bj_denom_2
+        bj2y = (sqrt(3)*L[3]*nVec[2])/bj_denom_2
+        bj2z = h + ((nVec[0] - sqrt(3)*nVec[1])*L[3])/bj_denom_2
         
         A_2 = (sqrt(3)*bj2y + 2*L[2] - bj2x)/bj2z
         B_2 = (bj2x**2 + bj2y**2 + bj2z**2 + L[1]**2 - L[0]**2 - L[2]**2)/2*bj2z
@@ -77,9 +79,10 @@ class Robot:
     
         
         # Arm 03
-        bj3x = (L[3]*nVec[2])/sqrt(4*nVec[2]**2 - (nVec[0] + sqrt(3)*nVec[1])**2)
-        bj3y = (sqrt(3)*L[3]*nVec[2])/sqrt(4*nVec[2]**2 - (nVec[0] + sqrt(3)*nVec[1])**2)
-        bj3z = h - ((nVec[0] + sqrt(3)*nVec[1])*L[3])/sqrt((nVec[0] + sqrt(3)*nVec[1])**2 - 4*nVec[2]**2)
+        bj_denom_3 = sqrt(4*nVec[2]**2 + nVec[0]**2 + 2*sqrt(3)*nVec[0]*nVec[1] + 3*nVec[1]**2)
+        bj3x = -(L[3]*nVec[2])/bj_denom_3
+        bj3y = -(sqrt(3)*L[3]*nVec[2])/bj_denom_3
+        bj3z = h + ((nVec[0] + sqrt(3)*nVec[1])*L[3])/bj_denom_3
 
         A_3 = -(bj3x + sqrt(3)*bj3y + 2*L[2])/bj3z
         B_3 = (bj3x**2 + bj3y**2 + bj3z**2 + L[1]**2 - L[0]**2 - L[2]**2)/(2*bj3z)
