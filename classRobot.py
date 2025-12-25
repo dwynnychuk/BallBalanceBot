@@ -23,6 +23,15 @@ class Robot:
         """
         L = self.L
         
+        # reference position (theta 0)
+        A = (L[1] + L[2])/h
+        B = (L[0]**2 + h**2 - L[3]**2 - (L[1] + L[2])**2)/(2*h)
+        C = A**2 + 1
+        D = 2*(A*B - (L[1] + L[2]))
+        E = B**2 + (L[1] + L[2])**2 - L[0]**2
+        PX = (-D + sqrt(D**2 - 4*C*E))/(2*C)
+        PZ = sqrt(L[0]**2 - (PX - (L[1] + L[2]))**2)
+        
         # Arm 01
         bj1x = (L[3]*nVec[2])/sqrt(nVec[0]**2 + nVec[2]**2)
         bj1y = 0
@@ -37,6 +46,10 @@ class Robot:
         pj1x = (-D_1 + sqrt(D_1**2 - (4*C_1*E_1)))/(2*C_1)
         pj1y = 0
         pj1z = sqrt(L[1]**2 - (pj1x - L[2])**2)
+        
+        # check elbow up vs elbow down
+        if bj1z < PZ:
+            pj1z = -pj1z
         
         theta_1 = degrees(atan2(pj1z, pj1x-L[2]))
         
@@ -56,6 +69,10 @@ class Robot:
         pj2y = -sqrt(3)*pj2x
         pj2z = sqrt(L[1]**2 - 4*pj2x**2 + 4*L[2]*pj2x - L[2]**2)
         
+        # check elbow up vs elbow down
+        if bj2z < PZ:
+            pj2z = -pj2z
+        
         theta_2 = degrees(atan2(pj2z, (sqrt(pj2x**2 + pj2y**2) - L[2])))
     
         
@@ -73,5 +90,9 @@ class Robot:
         pj3x = (-D_3 - sqrt(D_3**2 - 4*C_3*E_3))/(2*C_3)
         pj3y = sqrt(3)*pj3x
         pj3z = sqrt(L[1]**2 - 4*pj3x**2 - 4*L[2]*pj3x - L[2]**2)
+        
+        # check elbow up vs elbow down
+        if bj3z < PZ:
+            pj3z = -pj3z
         
         theta_3 = degrees(atan2(pj3z, (sqrt(pj3x**2 + pj3y**2) - L[2])))
