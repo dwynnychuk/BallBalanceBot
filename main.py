@@ -5,12 +5,13 @@ import classServo
 from logger import get_logger
 import time
 import cv2 as cv
+import math
 
 logger = get_logger(__name__)
 
 def main():
     # TODO servo init can be cleaned up
-    servos: classServo.Servo = classServo.init_servos(3)
+    servos: list[classServo.Servo] = classServo.init_servos(3)
     cam = classCamera.Camera()
     pid = classControl.PID()
     robot = classRobot.Robot()
@@ -19,7 +20,7 @@ def main():
     
     # Initial Conditions
     setpoint = [0,0]
-    desired_height = robot.L[0]     # approximation
+    desired_height = 0.05     # approximation
     
     try:
         while True:
@@ -33,6 +34,22 @@ def main():
                 # Convert coordinates
                 ball_centered = cam._adjust_ball_coordinate_frame(ball)
                 
+                # Calculate tilt of platform
+                pid_out = pid.compute_output(setpoint, ball_centered)
+                nx, ny = pid_out
+                nz = 1
+                pid_norm = math.sqrt(nx**2 + ny**2 + nz**2)
+                if pid_norm < 1e-6:         # div/ 0. on startup
+                    continue
+                
+                nVec = [nx/pid_norm, ny/pid_norm, nz/pid_norm]
+                
+                # Inverse Kinematics
+                thetas = robot.kinematics_inv(nVec, desired_height)
+                
+                # Rotate Servos
+                for servo, theta in zip(servos, thetas):
+                    servo.rotate_absolute(int(theta))
             
             if cv.waitKey(1) & 0xFF == 27:
                 break

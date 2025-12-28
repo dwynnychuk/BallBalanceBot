@@ -38,12 +38,18 @@ class Servo:
         
         if position < self.minAngle:
             logger.warning(f"Demanded Angle of {position} on Servo {self.id} Less than minimum!")
+            position = self.minAngle
+            
         elif position > self.maxAngle:
             logger.warning(f"Demanded Angle of {position} on Servo {self.id} Greater than maximum!")
+            position = self.maxAngle
+            
         else:
             logger.debug(f"Moving Servo {self.id} to: {position}")
-            if self.kit:
-                self.kit.servo[self.id].angle = position
+            
+        if self.kit:
+            self.kit.servo[self.id].angle = position
+            self.currentAngle = position
     
     def reset(self) -> None:
         logger.debug(f"Homed Servo {self.id} to {self.homeAngle}")
@@ -58,10 +64,8 @@ def home_all(servos: list[Servo]) -> None:
     logger.debug("All servos homed")
     
 def rotate_all(servos: list[Servo], angle: int, offset: bool = True) -> None:
-    n = len(servos)
-    for i in range(n):
-        servos[i].rotate_absolute(angle, offset)
-    
+    for servo in servos:
+        servo.rotate_absolute(angle, offset)
     
 def _initialize_servo_range(servo_hat, num_servos: int, lower_limit=500, upper_limit=2500) -> None:
     """Open up servo range to unlock full range of motion"""
