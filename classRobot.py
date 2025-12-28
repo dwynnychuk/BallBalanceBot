@@ -5,10 +5,9 @@ logger = get_logger(__name__)
 
 class Robot:
     def __init__(self):
-        self.L = [0.1, 0.1, 0.1, 0.1]   # populate with CAD, mechanical constants
-    
-    def kinematics_fwd(self, angles: list[float]):
-        pass
+        # TODO populate with CAD, mechanical constants
+        self.L = [0.1, 0.1, 0.1, 0.1]
+        logger.debug("Robot class initialized")
     
     def kinematics_inv(self, nVec: list[float], h: float) -> list[float]:
         """Inputs:
@@ -107,3 +106,8 @@ class Robot:
         thetas = [theta_1, theta_2, theta_3]
         
         return thetas
+    
+    def control_platform(self, desired_pose: list) -> None:
+        """control platform
+        desired pose to come from PID output and include normal vector as well as height"""
+        pass

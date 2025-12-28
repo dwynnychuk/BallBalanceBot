@@ -13,10 +13,13 @@ class PID:
         self.dt = None
         self.error_x = 0
         self.error_y = 0
+        self.prev_error_x = 0
+        self.prev_error_y = 0
         self.integral_x = 0
         self.integral_y = 0
         self.out_x = 0
         self.out_y = 0
+        logger.debug("PID class initialized")
         
         
     def compute_output(self, setpoint, measurement):

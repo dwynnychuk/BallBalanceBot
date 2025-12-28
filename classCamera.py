@@ -114,7 +114,8 @@ class Camera:
         return mask
     
     def _find_ball(self, frame, unprocessed = None):
-        """Detect Blobs to find contour of ball"""
+        """Detect Blobs to find contour of ball
+            OUTPUT: Ball [x, y, radius]"""
         contours, _ = cv.findContours(frame, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
         ball = None
         for contour in contours:
