@@ -24,6 +24,8 @@ def main(display: bool = False):
     desired_height = 0.05     # approximation
     CONTROL_HZ = 20
     CONTROL_DT = 1/CONTROL_HZ
+    MAX_TILT_RAD = math.radians(4)
+    TILT_THRES = 1e-6
     last_update = time.perf_counter()
     
     try:
@@ -45,10 +47,18 @@ def main(display: bool = False):
                 
                 # Calculate tilt of platform
                 pid_out = pid.compute_output(setpoint, ball_centered)
-                nx, ny = pid_out
-                nz = 1
+                tilt_x = max(min(pid_out[0], MAX_TILT_RAD), -MAX_TILT_RAD)
+                tilt_y = max(min(pid_out[1], MAX_TILT_RAD), -MAX_TILT_RAD)
+                tilt_mag = math.sqrt(tilt_x**2 + tilt_y**2)
+                
+                if tilt_mag > TILT_THRES:
+                    nx = math.sin(tilt_x)
+                    ny = math.sin(tilt_y)
+                    nz = math.cos(tilt_mag)
+                else:
+                    ny, ny, nz = 0.0, 0.0, 1.0
                 pid_norm = math.sqrt(nx**2 + ny**2 + nz**2)
-                if pid_norm < 1e-6:         # div/ 0. on startup
+                if pid_norm < TILT_THRES:         # div/ 0. on startup
                     continue
                 
                 nVec = [nx/pid_norm, ny/pid_norm, nz/pid_norm]
