@@ -32,10 +32,7 @@ class Servo:
         """Adjust coordinate frame such that 0degrees is a horizontal arm"""
         return 90 - position
         
-    def rotate_absolute(self, position: int, offset: bool = True) -> None:
-        if offset:
-            position = self._run_position_offset(position)
-        
+    def rotate_absolute(self, position: int) -> None:        
         if position < self.minAngle:
             logger.warning(f"Demanded Angle of {position} on Servo {self.id} Less than minimum!")
             position = self.minAngle
@@ -63,9 +60,9 @@ def home_all(servos: list[Servo]) -> None:
         servo.reset()
     logger.debug("All servos homed")
     
-def rotate_all(servos: list[Servo], angle: int, offset: bool = True) -> None:
+def rotate_all(servos: list[Servo], angle: int) -> None:
     for servo in servos:
-        servo.rotate_absolute(angle, offset)
+        servo.rotate_absolute(angle)
     
 def _initialize_servo_range(servo_hat, num_servos: int, lower_limit=500, upper_limit=2500) -> None:
     """Open up servo range to unlock full range of motion"""

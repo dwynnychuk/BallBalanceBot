@@ -6,7 +6,7 @@ logger = get_logger(__name__)
 class Robot:
     def __init__(self):
         # TODO populate with CAD, mechanical constants
-        self.L = [0.1, 0.1, 0.1, 0.1]
+        self.L = [0.07, 0.07, 0.046, 0.076]
         logger.debug("Robot class initialized")
     
     def kinematics_inv(self, nVec: list[float], h: float) -> list[float]:

@@ -6,10 +6,11 @@ from logger import get_logger
 import time
 import cv2 as cv
 import math
+import argparse
 
 logger = get_logger(__name__)
 
-def main():
+def main(display: bool = False):
     # TODO servo init can be cleaned up
     servos: list[classServo.Servo] = classServo.init_servos(3)
     cam = classCamera.Camera()
@@ -27,7 +28,7 @@ def main():
             frame = cam.latest_frame
             ball = cam.get_ball_position()
             
-            if frame is not None:
+            if display and frame is not None:
                 cv.imshow("frame", cv.resize(frame, (640,480)))
                 
             if ball is not None:
@@ -51,11 +52,19 @@ def main():
                 for servo, theta in zip(servos, thetas):
                     servo.rotate_absolute(int(theta))
             
-            if cv.waitKey(1) & 0xFF == 27:
+            if display and cv.waitKey(1) & 0xFF == 27:
                 break
     finally:
         cam.stop()
-        cv.destroyAllWindows()
+        if display:
+            cv.destroyAllWindows()
     
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--display",
+        action = "store_true",
+        help = "Enable OpenCV display window"
+    )
+    args = parser.parse_args()
+    main(display=args.display)
