@@ -51,4 +51,5 @@ class PID:
         self.prev_error_y = error_y
         self.tn1 = self.t0
         
+        logger.debug(f"PID Output -> x: {self.out_x}, y: {self.out_y}")
         return [self.out_x, self.out_y]

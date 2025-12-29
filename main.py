@@ -22,9 +22,17 @@ def main(display: bool = False):
     # Initial Conditions
     setpoint = [0,0]
     desired_height = 0.05     # approximation
+    CONTROL_HZ = 20
+    CONTROL_DT = 1/CONTROL_HZ
+    last_update = time.perf_counter()
     
     try:
         while True:
+            now = time.perf_counter()
+            if now - last_update < CONTROL_DT:
+                time.sleep(0.001)
+                continue
+            last_update = now
             frame = cam.latest_frame
             ball = cam.get_ball_position()
             

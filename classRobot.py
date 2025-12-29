@@ -104,6 +104,7 @@ class Robot:
         theta_3 = angle_offset - degrees(atan2(pj3z, (sqrt(pj3x**2 + pj3y**2) - L[2])))
 
         thetas = [theta_1, theta_2, theta_3]
+        logger.debug(f"IK Solution: {thetas}")
         
         return thetas
     
