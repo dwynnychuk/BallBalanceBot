@@ -144,6 +144,7 @@ class Camera:
         y_c = int(self.camera_fov[1]/2)
         x = ball[0] - x_c
         y = ball[1] - y_c
+        logger.debug(f"X,Y Adjusted Ball Coords: [{x}, {y}]")
         return [x, y, ball[2]]        
 
 if __name__ == "__main__":

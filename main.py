@@ -56,7 +56,7 @@ def main(display: bool = False):
                     ny = math.sin(tilt_y)
                     nz = math.cos(tilt_mag)
                 else:
-                    ny, ny, nz = 0.0, 0.0, 1.0
+                    nx, ny, nz = 0.0, 0.0, 1.0
                 pid_norm = math.sqrt(nx**2 + ny**2 + nz**2)
                 if pid_norm < TILT_THRES:         # div/ 0. on startup
                     continue
