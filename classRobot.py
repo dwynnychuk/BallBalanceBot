@@ -53,7 +53,7 @@ class Robot:
             pj1z = -pj1z
         
         # adjust for physical build (0 -> vertical)
-        theta_1 = angle_offset - degrees(atan2(pj1z, pj1x-L[2]))
+        theta_1 = angle_offset - degrees(atan2(pj1x-L[2], pj1z))
         
         
         # Arm 02
@@ -63,7 +63,7 @@ class Robot:
         bj2z = h + ((nVec[0] - sqrt(3)*nVec[1])*L[3])/bj_denom_2
         
         A_2 = (sqrt(3)*bj2y - 2*L[2] - bj2x)/bj2z
-        B_2 = (bj2x**2 + bj2y**2 + bj2z**2 + L[1]**2 - L[0]**2 - L[2]**2)/2*bj2z
+        B_2 = (bj2x**2 + bj2y**2 + bj2z**2 + L[1]**2 - L[0]**2 - L[2]**2)/(2*bj2z)
         C_2 = A_2**2 + 4
         D_2 = 2*(A_2*B_2 + 2*L[2])
         E_2 = B_2**2 + L[2]**2 - L[1]**2
@@ -77,7 +77,7 @@ class Robot:
             pj2z = -pj2z
             
         # adjust for physical build (0 -> vertical)
-        theta_2 = angle_offset - degrees(atan2(pj2z, (sqrt(pj2x**2 + pj2y**2) - L[2])))
+        theta_2 = angle_offset - degrees(atan2((sqrt(pj2x**2 + pj2y**2) - L[2]), pj2z))
     
         
         # Arm 03
@@ -101,7 +101,7 @@ class Robot:
             pj3z = -pj3z
             
         # adjust for physical build (0 -> vertical)
-        theta_3 = angle_offset - degrees(atan2(pj3z, (sqrt(pj3x**2 + pj3y**2) - L[2])))
+        theta_3 = angle_offset - degrees(atan2((sqrt(pj3x**2 + pj3y**2) - L[2]),pj3z))
 
         thetas = [theta_1, theta_2, theta_3]
         logger.debug(f"IK Solution: {thetas}")
@@ -112,3 +112,10 @@ class Robot:
         """control platform
         desired pose to come from PID output and include normal vector as well as height"""
         pass
+    
+if __name__ == "__main__":
+    robot = Robot()
+    nVec = [0, 0, 1]  # flat platform
+    PZ = 0.065
+    thetas = robot.kinematics_inv(nVec, PZ)
+    print("Theta angles:", thetas)
