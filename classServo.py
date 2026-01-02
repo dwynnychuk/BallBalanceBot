@@ -22,8 +22,8 @@ class Servo:
     def __init__(self, id: int, kit, homeAngle: int = 90):
         self.id = id
         self.kit = kit
-        self.minAngle = 0
-        self.maxAngle = 90
+        self.minAngle = 16
+        self.maxAngle = 110
         self.homeAngle = homeAngle
         self.currentAngle = None
         logger.debug(f"ID: {self.id} Instantiated")

@@ -21,10 +21,10 @@ def main(display: bool = False):
     
     # Initial Conditions
     setpoint = [0,0]
-    desired_height = 0.085     # approximation
+    desired_height = 0.1     # approximation
     CONTROL_HZ = 20
     CONTROL_DT = 1/CONTROL_HZ
-    MAX_TILT_RAD = math.radians(4)
+    MAX_TILT_RAD = math.radians(30)
     TILT_THRES = 1e-6
     last_update = time.perf_counter()
     
