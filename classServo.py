@@ -87,6 +87,32 @@ def init_servos(num_servos: int) -> list:
         print(f"Error: initializing Servos {e}")    
         logger.error(f"Error initializing servos: {e}")
         
+def forward_kinematics_sweep(
+    servos: list[Servo],
+    start: int = -10,
+    stop: int = 100,
+    step: int = 2,
+    dwell: float = 0.5
+) -> None:
+    """
+    Sweep all servos together to visually observe platform motion.
+    This acts as a forward-kinematics diagnostic.
+    """
+
+    logger.info("=== Forward Kinematics Sweep START ===")
+
+    for angle in range(start, stop + step, step):
+        logger.info(f"FK TEST → rotate_all({angle})")
+        rotate_all(servos, angle)
+        sleep(dwell)
+
+    for angle in range(stop, start - step, -step):
+        logger.info(f"FK TEST → rotate_all({angle})")
+        rotate_all(servos, angle)
+        sleep(dwell)
+
+    logger.info("=== Forward Kinematics Sweep END ===")
+        
 def test_servos(servos: list[Servo]) -> None:
     rotate_all(servos, 90, True)    
     sleep(1)
@@ -113,4 +139,4 @@ def test_servos(servos: list[Servo]) -> None:
     
 if __name__ == "__main__":
     servos = init_servos(num_servos)
-    test_servos(servos)
+    forward_kinematics_sweep(servos)
