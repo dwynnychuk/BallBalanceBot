@@ -1,4 +1,5 @@
 import cv2 as cv
+import os
 import numpy as np
 import threading
 from logger import get_logger
@@ -38,8 +39,12 @@ class Camera:
                             [0.00000000e+00, 0.00000000e+00, 1.00000000e+00]])
             
         elif camType == "PI":
-            dist = np.zeros((1,5))
-            cam = np.zeros((3,3))
+            calib = "calibration/pi_camera_calibration.npz"
+            if not os.path.exists(calib):
+                logger.warning("Pi camera calibration not available: File not found")
+                return None, None
+            data = np.load(calib)
+            dist, cam = data["distortion_coefficients"], data["camera_matrix"]
             
         return dist, cam
 
