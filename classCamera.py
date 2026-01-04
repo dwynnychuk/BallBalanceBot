@@ -147,10 +147,12 @@ class Camera:
     def _adjust_ball_coordinate_frame(self, ball: list) -> list:
         x_c = int(self.camera_fov[0]/2)
         y_c = int(self.camera_fov[1]/2)
-        x = ball[0] - x_c
-        y = ball[1] - y_c
+        x_cam = ball[0] - x_c
+        y_cam = ball[1] - y_c
+        x_cad = y_cam
+        y_cad = -x_cam
         logger.debug(f"X,Y Adjusted Ball Coords: [{x}, {y}]")
-        return [x, y, ball[2]]        
+        return [x_cad, y_cad, ball[2]]        
 
 if __name__ == "__main__":
     cam = Camera()
