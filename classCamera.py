@@ -151,7 +151,7 @@ class Camera:
         y_cam = ball[1] - y_c
         x_cad = y_cam
         y_cad = -x_cam
-        logger.debug(f"X,Y Adjusted Ball Coords: [{x}, {y}]")
+        logger.debug(f"X,Y Adjusted Ball Coords: [{x_cad}, {y_cad}]")
         return [x_cad, y_cad, ball[2]]        
 
 if __name__ == "__main__":

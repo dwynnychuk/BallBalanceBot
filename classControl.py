@@ -52,4 +52,7 @@ class PID:
         self.tn1 = self.t0
         
         logger.debug(f"PID Output -> x: {self.out_x}, y: {self.out_y}")
-        return [self.out_x, self.out_y]
+        
+        # Return -y as arm 2 - 3 math is reversed in Y
+        #TODO fix this in IK
+        return [self.out_x, -self.out_y]
