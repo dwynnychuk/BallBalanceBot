@@ -10,8 +10,8 @@ logger = get_logger(__name__)
 class Camera:
     def __init__(self):
         # import picamera2 only if used on raspberry pi
-        self.hsv_lower = np.array([20, 120, 120])      # need to tune after cad complete
-        self.hsv_upper = np.array([30, 255, 255])    # need to tune after cad 
+        self.hsv_lower = np.array([10, 50, 5])      # need to tune after cad complete
+        self.hsv_upper = np.array([40, 255, 100])    # need to tune after cad 
         self.camera_fov = (1280, 720)
         self.kernel_shape = (11,11)
         self.contour_area_threshold = 10000
