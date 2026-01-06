@@ -55,7 +55,8 @@ class Robot:
             pj1z = -pj1z
         
         # adjust for physical build (0 -> vertical)
-        theta_1 = angle_offset - degrees(atan2(pj1x-L[2], pj1z))
+        theta_raw_1 = degrees(atan2(pj1x-L[2], pj1z))
+        theta_1 = angle_offset - theta_raw_1
         
         
         # Arm 02
@@ -79,7 +80,8 @@ class Robot:
             pj2z = -pj2z
             
         # adjust for physical build (0 -> vertical)
-        theta_2 = angle_offset - degrees(atan2((sqrt(pj2x**2 + pj2y**2) - L[2]), pj2z))
+        theta_raw_2 = degrees(atan2((sqrt(pj2x**2 + pj2y**2) - L[2]), pj2z))
+        theta_2 = angle_offset - theta_raw_2
     
         
         # Arm 03
@@ -103,9 +105,11 @@ class Robot:
             pj3z = -pj3z
             
         # adjust for physical build (0 -> vertical)
-        theta_3 = angle_offset - degrees(atan2((sqrt(pj3x**2 + pj3y**2) - L[2]),pj3z))
+        theta_raw_3 = degrees(atan2((sqrt(pj3x**2 + pj3y**2) - L[2]),pj3z))
+        theta_3 = angle_offset - theta_raw_3
 
         thetas = [theta_1, theta_2, theta_3]
+        logger.debug(f"Raw Theta Values: {[theta_raw_1, theta_raw_2, theta_raw_3]}")
         logger.debug(f"IK Solution: {thetas}")
         
         return thetas
