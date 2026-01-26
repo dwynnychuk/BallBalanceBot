@@ -14,7 +14,7 @@ class Camera:
         self.hsv_upper = np.array([40, 255, 100])    # need to tune after cad 
         self.camera_fov = (1280, 720)
         self.small_frame_size = (640, 360)
-        self.kernel_shape = (5,5)
+        self.kernel_shape = (7,7)
         self.contour_area_threshold = 10000
         self.radius_threshold = [50, 400]
         self.kernel = cv.getStructuringElement(cv.MORPH_ELLIPSE, self.kernel_shape)
@@ -152,13 +152,12 @@ class Camera:
 
     def _process_image(self, frame):
         small_frame = cv.resize(frame, self.small_frame_size)
-        hsv = cv.cvtColor(frame, cv.COLOR_BGR2HSV)
+        hsv = cv.cvtColor(small_frame, cv.COLOR_BGR2HSV)
         mask = cv.inRange(hsv,self.hsv_lower, self.hsv_upper)
         
         # reduce morphology operations
-        mask = cv.morphologyEx(mask, cv.MORPH_OPEN, self.kernel, iterations=1)
-        # mask = cv.morphologyEx(mask, cv.MORPH_OPEN, self.kernel)
-        # mask = cv.morphologyEx(mask, cv.MORPH_CLOSE, self.kernel)
+        mask = cv.morphologyEx(mask, cv.MORPH_OPEN, self.kernel)
+        mask = cv.morphologyEx(mask, cv.MORPH_CLOSE, self.kernel)
         #logger.debug("HSV at center:", hsv[hsv.shape[0]//2, hsv.shape[1]//2])
 
         return mask
@@ -211,7 +210,7 @@ class Camera:
         y_cam = ball[1] - y_c
         x_cad = y_cam
         y_cad = -x_cam
-        logger.debug(f"X,Y Adjusted Ball Coords: [{x_cad}, {y_cad}]")
+        #logger.debug(f"X,Y Adjusted Ball Coords: [{x_cad}, {y_cad}]")
         return [x_cad, y_cad, ball[2]]        
 
 if __name__ == "__main__":
