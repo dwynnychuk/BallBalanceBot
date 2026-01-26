@@ -5,9 +5,9 @@ logger = get_logger(__name__)
 
 class PID:
     def __init__(self):
-        self.kp = 0.001
+        self.kp = 0.0015
         self.ki = 0.0
-        self.kd = 0.00005
+        self.kd = 0.0
         self.t0 = None
         self.tn1 = None
         self.dt = None
@@ -55,4 +55,4 @@ class PID:
         
         # Return -y as arm 2 - 3 math is reversed in Y
         #TODO fix this in IK
-        return [self.out_x, -self.out_y]
+        return [-self.out_x, self.out_y]
