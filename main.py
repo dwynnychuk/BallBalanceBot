@@ -27,6 +27,9 @@ def main(display: bool = False):
     MAX_TILT_RAD = math.radians(20)
     TILT_THRES = 1e-6
     last_update = time.perf_counter()
+    iteration = 0
+    
+    latency_log = []
     
     try:
         while True:
@@ -34,21 +37,35 @@ def main(display: bool = False):
             if now - last_update < CONTROL_DT:
                 time.sleep(0.001)
                 continue
+            
             last_update = now
+            iteration += 1
+            
             frame = cam.latest_frame
             ball = cam.get_ball_position()
             
+            ball_age = cam.ball_age
+            if ball_age is not None and ball_age > 0.1:  # 100ms stale
+                logger.warning(f"Stale ball data: {ball_age*1000:.0f}ms old")
+            
             if display and frame is not None:
-                cv.imshow("frame", cv.resize(frame, (640,480)))
+                if ball_age is not None:
+                    cv.putText(frame, f"Ball age: {ball_age*1000:.0f}ms", 
+                             (10, 90), cv.FONT_HERSHEY_SIMPLEX, 0.6, (0,255,255), 2)
+                cv.imshow("frame", cv.resize(frame, (640, 480)))
                 
             if ball is not None:
                 # Convert coordinates
+                loop_start = time.perf_counter()
+                
                 ball_centered = cam._adjust_ball_coordinate_frame(ball)
                 
                 # Calculate tilt of platform
                 pid_out = pid.compute_output(setpoint, ball_centered)
+                
                 tilt_x = max(min(pid_out[0], MAX_TILT_RAD), -MAX_TILT_RAD)
                 tilt_y = max(min(pid_out[1], MAX_TILT_RAD), -MAX_TILT_RAD)
+                
                 tilt_mag = math.sqrt(tilt_x**2 + tilt_y**2)
                 
                 if tilt_mag > TILT_THRES:
@@ -66,14 +83,17 @@ def main(display: bool = False):
                 # Inverse Kinematics
                 thetas = robot.kinematics_inv(nVec, desired_height)
                 
-                # debugging
-                logger.info(f"Ball: {ball_centered}, PID: [{tilt_x:.3f}, {tilt_y:.3f}], "
-                            f"nVec: [{nx:.3f}, {ny:.3f}, {nz:.3f}], "
-                            f"Thetas: {[int(t) for t in thetas]}")
-                
                 # Rotate Servos
                 for servo, theta in zip(servos, thetas):
                     servo.rotate_absolute(int(theta))
+                    
+                loop_time = (time.perf_counter() - loop_start)*1000
+                latency_log.append(loop_time)
+                
+                if iteration % 100 == 0:
+                    avg_latency = sum(latency_log[-100:]) / min(100, len(latency_log))
+                    logger.info(f"Control loop: {avg_latency:.1f}ms avg, "
+                               f"Ball age: {ball_age*1000:.0f}ms" if ball_age else "")
             
             if display and cv.waitKey(1) & 0xFF == 27:
                 break
