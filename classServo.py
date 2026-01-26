@@ -33,20 +33,23 @@ class Servo:
         return 90 - position
         
     def rotate_absolute(self, position: int) -> None:        
-        if position < self.minAngle:
-            logger.warning(f"Demanded Angle of {position} on Servo {self.id} Less than minimum!")
+        
+        servo_angle = self._run_position_offset(position)
+        
+        if servo_angle < self.minAngle:
+            logger.warning(f"IK Angle: {position} -> Servo Angle: {servo_angle} on Servo {self.id} Less than minimum!")
             position = self.minAngle
             
-        elif position > self.maxAngle:
-            logger.warning(f"Demanded Angle of {position} on Servo {self.id} Greater than maximum!")
+        elif servo_angle > self.maxAngle:
+            logger.warning(f"IK Angle: {position} -> Servo Angle: {servo_angle} on Servo {self.id} Greater than maximum!")
             position = self.maxAngle
             
         else:
-            logger.debug(f"Moving Servo {self.id} to: {position}")
+            logger.debug(f"Moving Servo {self.id} to: IK Angle: {position} -> Servo Angle {servo_angle}")
             
         if self.kit:
-            self.kit.servo[self.id].angle = position
-            self.currentAngle = position
+            self.kit.servo[self.id].angle = servo_angle
+            self.currentAngle = servo_angle
     
     def reset(self) -> None:
         logger.debug(f"Homed Servo {self.id} to {self.homeAngle}")

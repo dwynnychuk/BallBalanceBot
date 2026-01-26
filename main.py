@@ -66,6 +66,11 @@ def main(display: bool = False):
                 # Inverse Kinematics
                 thetas = robot.kinematics_inv(nVec, desired_height)
                 
+                # debugging
+                logger.info(f"Ball: {ball_centered}, PID: [{tilt_x:.3f}, {tilt_y:.3f}], "
+                            f"nVec: [{nx:.3f}, {ny:.3f}, {nz:.3f}], "
+                            f"Thetas: {[int(t) for t in thetas]}")
+                
                 # Rotate Servos
                 for servo, theta in zip(servos, thetas):
                     servo.rotate_absolute(int(theta))
