@@ -59,7 +59,7 @@ class Camera:
             
             picam2 = self.picam2
             
-            config = picam2.create_video_configuration(main={"size": self.camera_fov})
+            config = picam2.create_video_configuration(main={"size": self.camera_fov}, buffer_count=2)
             #picam2.set_controls({"ScalerCrop": None})
             picam2.configure(config)
             picam2.start()
@@ -96,7 +96,7 @@ class Camera:
             self.latest_frame = frame
             processed = self._process_image(frame)
             self.latest_ball_pos = self._find_ball(processed, unprocessed=frame.copy())
-            time.sleep(0.01)
+            
             
         cv.destroyAllWindows()
 
