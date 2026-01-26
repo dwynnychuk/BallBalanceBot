@@ -109,8 +109,8 @@ class Robot:
         theta_3 = angle_offset - theta_raw_3
 
         thetas = [theta_1, theta_2, theta_3]
-        logger.debug(f"Raw Theta Values: {[theta_raw_1, theta_raw_2, theta_raw_3]}")
-        logger.debug(f"IK Solution: {thetas}")
+        #logger.debug(f"Raw Theta Values: {[theta_raw_1, theta_raw_2, theta_raw_3]}")
+        #logger.debug(f"IK Solution: {thetas}")
         
         return thetas
     

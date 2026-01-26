@@ -13,10 +13,11 @@ class Camera:
         self.hsv_lower = np.array([10, 50, 5])      # need to tune after cad complete
         self.hsv_upper = np.array([40, 255, 100])    # need to tune after cad 
         self.camera_fov = (1280, 720)
-        self.kernel_shape = (11,11)
+        self.small_frame_size = (640, 360)
+        self.kernel_shape = (5,5)
         self.contour_area_threshold = 10000
         self.radius_threshold = [50, 400]
-        self.kernel = cv.getStructuringElement(cv.MORPH_ELLIPSE,self.kernel_shape)
+        self.kernel = cv.getStructuringElement(cv.MORPH_ELLIPSE, self.kernel_shape)
         self.latest_ball_pos = None
         self.latest_ball_timestamp = None
         self.frame_timestamp = None
@@ -26,6 +27,7 @@ class Camera:
         self.running = True
         self.frame_count = 0
         self.detection_count = 0
+        self.fps_start_time = time.perf_counter()
         
         try:
             from picamera2 import Picamera2
@@ -111,9 +113,12 @@ class Camera:
             
             # log every 100 frames
             if self.frame_count % 100 == 0:
-                fps = 1.0 / self.delta_t if self.delta_t > 0 else 0
+                elapsed = time.perf_counter() - self.fps_start_time()
+                fps = 1.0 / elapsed
+                logger.info(f"Camera FPS: {fps:.1f}")
                 detection_rate = (self.detection_count / self.frame_count) * 100
                 logger.info(f"Camera: {fps:.1f} FPS, {detection_rate:.1f}% detection rate")
+                self.fps_start_time = time.perf_counter()
             
         cv.destroyAllWindows()
 
@@ -146,11 +151,16 @@ class Camera:
             self.picam2.stop()
 
     def _process_image(self, frame):
+        small_frame = cv.resize(frame, self.small_frame_size)
         hsv = cv.cvtColor(frame, cv.COLOR_BGR2HSV)
         mask = cv.inRange(hsv,self.hsv_lower, self.hsv_upper)
-        mask = cv.morphologyEx(mask, cv.MORPH_OPEN, self.kernel)
-        mask = cv.morphologyEx(mask, cv.MORPH_CLOSE, self.kernel)
+        
+        # reduce morphology operations
+        mask = cv.morphologyEx(mask, cv.MORPH_OPEN, self.kernel, iterations=1)
+        # mask = cv.morphologyEx(mask, cv.MORPH_OPEN, self.kernel)
+        # mask = cv.morphologyEx(mask, cv.MORPH_CLOSE, self.kernel)
         #logger.debug("HSV at center:", hsv[hsv.shape[0]//2, hsv.shape[1]//2])
+
         return mask
     
     def _find_ball(self, frame, unprocessed = None):
@@ -158,21 +168,36 @@ class Camera:
             OUTPUT: Ball [x, y, radius]"""
         contours, _ = cv.findContours(frame, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
         ball = None
+        
+        # Scale by downsampling self.small_frame_size
+        scale = 2.0
+        
         for contour in contours:
             area = cv.contourArea(contour)
-            if area > self.contour_area_threshold:
+            # Adjust area threshold based on scaling
+            if area > (self.contour_area_threshold / (scale**2)):
                 (x,y), radius = cv.minEnclosingCircle(contour)
+                
+                # scale to original coordinates
+                x *= scale
+                y *= scale
+                radius *= scale
+                
                 center = (int(x), int(y))
                 radius = int(radius)
+                
                 if self.radius_threshold[0] < radius < self.radius_threshold[1]:
-                    if unprocessed is not None:
+                    #if unprocessed is not None:
                         #cv.drawContours(unprocessed,contour, -1, (255,255,0),4)
-                        cv.circle(unprocessed, center, radius,(0, 0, 255),3)
-                        cv.circle(unprocessed, center, 5, (255,0,0),10)  # draw point at middle of ball
+                    #    cv.circle(unprocessed, center, radius,(0, 0, 255),3)
+                    #    cv.circle(unprocessed, center, 5, (255,0,0),10)  # draw point at middle of ball
                     ball = [center[0], center[1], radius]
                     self.tn1 = self.t0
                     self.t0 = time.perf_counter()
-                    logger.debug(f"Ball Pos: {ball}, Time: {self.delta_t*1000:.1f}")
+                    
+                    if self.frame_count % 30 == 0:
+                        logger.debug(f"Ball Pos: {ball}, Time: {self.delta_t*1000:.1f}")
+                        
                     return ball
         return ball 
 

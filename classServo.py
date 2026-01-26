@@ -45,7 +45,8 @@ class Servo:
             position = self.maxAngle
             
         else:
-            logger.debug(f"Moving Servo {self.id} to: IK Angle: {position} -> Servo Angle {servo_angle}")
+            #logger.debug(f"Moving Servo {self.id} to: IK Angle: {position} -> Servo Angle {servo_angle}")
+            pass
             
         if self.kit:
             self.kit.servo[self.id].angle = servo_angle
