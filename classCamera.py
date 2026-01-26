@@ -113,7 +113,7 @@ class Camera:
             
             # log every 100 frames
             if self.frame_count % 100 == 0:
-                elapsed = time.perf_counter() - self.fps_start_time()
+                elapsed = time.perf_counter() - self.fps_start_time
                 fps = 1.0 / elapsed
                 logger.info(f"Camera FPS: {fps:.1f}")
                 detection_rate = (self.detection_count / self.frame_count) * 100
