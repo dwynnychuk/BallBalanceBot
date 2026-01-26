@@ -7,26 +7,36 @@ import time
 
 class Calibration:
     def __init__(self):
-        self.fp = os.path.join(os.getcwd(), "calibration/")
-        self.nrow = 9
-        self.ncol = 6
-        self.criteria = (cv.TERM_CRITERIA_EPS + cv.TERM_CRITERIA_MAX_ITER, 30, 0.001)
-        self.defaultCalNum = 20
-        self.camera_fov = (1280, 720)
+        self.fp: str = os.path.join(os.getcwd(), "calibration/")
+        
+        # Number of internal corners, not squares
+        self.nrow: int = 9
+        self.ncol: int = 6
+        
+        self.criteria: tuple = (cv.TERM_CRITERIA_EPS + cv.TERM_CRITERIA_MAX_ITER, 30, 0.001)
+        self.default_cal_num: int = 20
+        self.camera_fov: tuple[int, int] = (1280, 720)
+        self.pi_camera_available: bool = False
         
         # see if running on raspberry pi
         try:
             from picamera2 import Picamera2
-            self.Pi_Camera_Available = True
+            self.pi_camera_available = True
             self.picam2 = Picamera2()
-        except:
-            self.Pi_Camera_Available = False                
+        except ImportError:
+            self.pi_camera_available = False                
         
-    def take_calibration_images(self):
+    def take_calibration_images(self) -> None:
+        """ 
+        Take all calibration images for camera calibration
+        
+        Returns:
+        None
+        """
         # Open camera
         os.makedirs(self.fp, exist_ok=True)
         
-        if self.Pi_Camera_Available:
+        if self.pi_camera_available:
             config = self.picam2.create_video_configuration(
                 main={"size": self.camera_fov}
                 )
@@ -47,14 +57,13 @@ class Calibration:
         time.sleep(1)
         
         try: 
-            for i in range(self.defaultCalNum):
+            for i in range(self.default_cal_num):
                 print(f"Capturing Image: {i}")
                 time.sleep(0.5)
                 frame = get_frame()
                 if frame is None:
                     continue
                 
-                #cv.imshow(f"{i}",frame)
                 cv.waitKey(100)
                 
                 print(f"Captured image: {i}, saving...")
@@ -64,7 +73,7 @@ class Calibration:
                 time.sleep(2)            
                 
         finally:
-            if self.Pi_Camera_Available:
+            if self.pi_camera_available:
                 self.picam2.stop()
             else:
                 cap.release()
@@ -72,13 +81,23 @@ class Calibration:
             cv.destroyAllWindows()
                 
     def calibrate_camera(self, showAll = True, printAll = True):
+        """
+        Performs camera calibration
+
+        Args:
+            showAll (bool, optional): Show all calibration images and detected corners. Defaults to True.
+            printAll (bool, optional): Print rotation and translation vectors from calibration images. Defaults to True.
+
+        Raises:
+            RuntimeError: No images found
+        """
         worldpointscur = np.zeros((self.nrow*self.ncol, 3), np.float32)
         worldpointscur[:,:2] = np.mgrid[0:self.nrow, 0:self.ncol].T.reshape(-1,2)
 
-        worldpointlist = []
-        imagepointlist = []
+        worldpointlist: list = []
+        imagepointlist: list = []
         
-        images = glob.glob(os.path.join(self.fp, "*.jpg"))
+        images: list = glob.glob(os.path.join(self.fp, "*.jpg"))
         
         if not images:
             raise RuntimeError("No Calibration Images Found")
@@ -106,7 +125,7 @@ class Calibration:
         print(f"Camera Matrix:\n{camMat}\n")
         print(f"Distortion Coefficients:\n{distCoefs}\n")
         
-        if self.Pi_Camera_Available:
+        if self.pi_camera_available:
             np.savez(
                 self.fp + "pi_camera_calibration.npz",
                 camera_matrix = camMat,
