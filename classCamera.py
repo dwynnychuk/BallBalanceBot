@@ -14,7 +14,7 @@ class Camera:
         self.hsv_upper = np.array([40, 255, 100])    # need to tune after cad 
         self.camera_fov = (1280, 720)
         self.small_frame_size = (640, 360)
-        self.kernel_shape = (7,7)
+        self.kernel_shape = (5,5)
         self.contour_area_threshold = 10000
         self.radius_threshold = [50, 400]
         self.kernel = cv.getStructuringElement(cv.MORPH_ELLIPSE, self.kernel_shape)
