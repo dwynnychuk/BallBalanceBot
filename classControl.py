@@ -5,9 +5,9 @@ logger = get_logger(__name__)
 
 class PID:
     def __init__(self):
-        self.kp = 0.0002
-        self.ki = 0.0
-        self.kd = 0.000125
+        self.kp = 0.00018
+        self.ki = 0.00015
+        self.kd = 0.0001
         self.alpha = 0.8
         self.t0 = None
         self.tn1 = None
