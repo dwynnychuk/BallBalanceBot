@@ -8,11 +8,16 @@ class PID:
         self.kp = 0.0017
         self.ki = 0.0
         self.kd = 0.00003
+        self.alpha = 0.8
         self.t0 = None
         self.tn1 = None
         self.dt = None
         self.prev_error_x = 0
         self.prev_error_y = 0
+        self.prev_measurement_x = None
+        self.prev_measurement_y = None
+        self.vel_x = 0
+        self.vel_y = 0
         self.integral_x = 0
         self.integral_y = 0
         self.out_x = 0
@@ -30,10 +35,13 @@ class PID:
         self.t0 = time.perf_counter()
         if self.tn1 is None:
             self.tn1 = self.t0
+            self.prev_measurement_x = measurement[0]
+            self.prev_measurement_y = measurement[1]
             return [self.out_x, self.out_y]
 
         error_x = setpoint[0] - measurement[0]
         error_y = setpoint[1] - measurement[1]
+        
         dt = self.t0 - self.tn1
         if dt <= 0:
             return [self.out_x, self.out_y]
@@ -41,14 +49,20 @@ class PID:
         self.integral_x += error_x * dt
         self.integral_y += error_y * dt
         
-        derivative_x = (error_x - self.prev_error_x)/dt
-        derivative_y = (error_y - self.prev_error_y)/dt
+        vx_raw = (measurement[0] - self.prev_measurement_x)/dt
+        vy_raw = (measurement[1] - self.prev_measurement_y)/dt
         
-        self.out_x = self.kp * error_x + self.ki * self.integral_x + self.kd * derivative_x
-        self.out_y = self.kp * error_y + self.ki * self.integral_y + self.kd * derivative_y
+        self.vel_x = self.alpha * self.vel_x + (1 - self.alpha) * vx_raw
+        self.vel_y = self.alpha * self.vel_y + (1 - self.alpha) * vy_raw
+        
+        self.out_x = self.kp * error_x + self.ki * self.integral_x - self.kd * self.vel_x
+        self.out_y = self.kp * error_y + self.ki * self.integral_y - self.kd * self.vel_y
         
         self.prev_error_x = error_x
         self.prev_error_y = error_y
+        
+        self.prev_measurement_x = measurement[0]
+        self.prev_measurement_y = measurement[1]
         self.tn1 = self.t0
         
         #logger.debug(f"PID Output -> x: {self.out_x}, y: {self.out_y}")
