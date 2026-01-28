@@ -13,7 +13,8 @@ class Camera:
         self.hsv_lower = np.array([10, 50, 5])      # need to tune after cad complete
         self.hsv_upper = np.array([40, 255, 100])    # need to tune after cad 
         self.camera_fov = (1280, 720)
-        self.small_frame_size = (640, 360)
+        self.scale = 4
+        self.small_frame_size = (int(self.camera_fov[0]/self.scale), int(self.camera_fov[1]/self.scale))
         self.kernel_shape = (5,5)
         self.contour_area_threshold = 10000
         self.radius_threshold = [50, 400]
@@ -151,6 +152,9 @@ class Camera:
             self.picam2.stop()
 
     def _process_image(self, frame):
+        if self.camMat is not None and self.distCoefs is not None:
+            frame = cv.undistort(frame, self.camMat, self.distCoefs)
+        
         small_frame = cv.resize(frame, self.small_frame_size)
         hsv = cv.cvtColor(small_frame, cv.COLOR_BGR2HSV)
         mask = cv.inRange(hsv,self.hsv_lower, self.hsv_upper)
@@ -168,19 +172,16 @@ class Camera:
         contours, _ = cv.findContours(frame, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
         ball = None
         
-        # Scale by downsampling self.small_frame_size
-        scale = 2.0
-        
         for contour in contours:
             area = cv.contourArea(contour)
             # Adjust area threshold based on scaling
-            if area > (self.contour_area_threshold / (scale**2)):
+            if area > (self.contour_area_threshold / (self.scale**2)):
                 (x,y), radius = cv.minEnclosingCircle(contour)
                 
                 # scale to original coordinates
-                x *= scale
-                y *= scale
-                radius *= scale
+                x *= self.scale
+                y *= self.scale
+                radius *= self.scale
                 
                 center = (int(x), int(y))
                 radius = int(radius)
