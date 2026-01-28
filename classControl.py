@@ -6,7 +6,7 @@ logger = get_logger(__name__)
 class PID:
     def __init__(self):
         self.kp = 0.00013
-        self.ki = 0.00018
+        self.ki = 0.0000002
         self.kd = 0.00016
         self.alpha = 0.7
         self.t0 = None
@@ -22,6 +22,7 @@ class PID:
         self.integral_y = 0
         self.out_x = 0
         self.out_y = 0
+        self.deadband = 20
         logger.debug("PID class initialized")
         
         
@@ -42,6 +43,12 @@ class PID:
         logger.debug(f"PID INPUT: x: {measurement[0]}, y: {measurement[1]}")
         error_x = setpoint[0] - measurement[0]
         error_y = setpoint[1] - measurement[1]
+        
+        if abs(error_x) < self.deadband:
+            error_x = 0
+        
+        if abs(error_y) < self.deadband:
+            error_y = 0
         
         dt = self.t0 - self.tn1
         if dt <= 0:
