@@ -13,7 +13,7 @@ class Camera:
         self.hsv_lower = np.array([10, 50, 5])      # need to tune after cad complete
         self.hsv_upper = np.array([40, 255, 100])    # need to tune after cad 
         self.camera_fov = (1280, 720)
-        self.scale = 4
+        self.scale = 4.0
         self.small_frame_size = (int(self.camera_fov[0]/self.scale), int(self.camera_fov[1]/self.scale))
         self.kernel_shape = (5,5)
         self.contour_area_threshold = 10000
@@ -153,7 +153,16 @@ class Camera:
 
     def _process_image(self, frame):
         if self.camMat is not None and self.distCoefs is not None:
-            frame = cv.undistort(frame, self.camMat, self.distCoefs)
+            # Scale camera matrix for downsampled image
+            scale_x = self.small_frame_size[0] / self.camera_fov[0]
+            scale_y = self.small_frame_size[1] / self.camera_fov[1]
+            scaled_cam = self.camMat.copy()
+            scaled_cam[0, 0] *= scale_x  # fx
+            scaled_cam[1, 1] *= scale_y  # fy
+            scaled_cam[0, 2] *= scale_x  # cx
+            scaled_cam[1, 2] *= scale_y  # cy
+            
+            small_frame = cv.undistort(small_frame, scaled_cam, self.distCoefs)
         
         small_frame = cv.resize(frame, self.small_frame_size)
         hsv = cv.cvtColor(small_frame, cv.COLOR_BGR2HSV)
