@@ -5,9 +5,9 @@ logger = get_logger(__name__)
 
 class PID:
     def __init__(self):
-        self.kp = 0.00013
+        self.kp = 0.00028
         self.ki = 0.0000002
-        self.kd = 0.00016
+        self.kd = 0.00015
         self.alpha = 0.7
         self.t0 = None
         self.tn1 = None
@@ -22,7 +22,8 @@ class PID:
         self.integral_y = 0
         self.out_x = 0
         self.out_y = 0
-        self.deadband = 20
+        self.deadband = 15
+        self.max_integral = 0.005
         logger.debug("PID class initialized")
         
         
@@ -56,6 +57,9 @@ class PID:
         
         self.integral_x += error_x * dt
         self.integral_y += error_y * dt
+        
+        self.integral_x = max(-self.max_integral, min(self.max_integral, self.integral_x))
+        self.integral_y = max(-self.max_integral, min(self.max_integral, self.integral_y))
         
         vx_raw = (measurement[0] - self.prev_measurement_x)/dt
         vy_raw = (measurement[1] - self.prev_measurement_y)/dt
