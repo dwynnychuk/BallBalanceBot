@@ -39,6 +39,7 @@ class PID:
             self.prev_measurement_y = measurement[1]
             return [self.out_x, self.out_y]
 
+        logger.debug(f"PID INPUT: x: {measurement[0]}, y: {measurement[1]}")
         error_x = setpoint[0] - measurement[0]
         error_y = setpoint[1] - measurement[1]
         
@@ -55,8 +56,16 @@ class PID:
         self.vel_x = self.alpha * self.vel_x + (1 - self.alpha) * vx_raw
         self.vel_y = self.alpha * self.vel_y + (1 - self.alpha) * vy_raw
         
-        self.out_x = self.kp * error_x + self.ki * self.integral_x - self.kd * self.vel_x
-        self.out_y = self.kp * error_y + self.ki * self.integral_y - self.kd * self.vel_y
+        out_px = self.kp * error_x
+        out_ix = self.ki * self.integral_x
+        out_dx = - self.kd * self.vel_x
+        
+        out_py = self.kp * error_y
+        out_iy = self.ki * self.integral_y
+        out_dy = - self.kd * self.vel_y
+        
+        self.out_x = out_px + out_ix + out_dx
+        self.out_y = out_py + out_iy + out_dy
         
         self.prev_error_x = error_x
         self.prev_error_y = error_y
@@ -65,7 +74,7 @@ class PID:
         self.prev_measurement_y = measurement[1]
         self.tn1 = self.t0
         
-        #logger.debug(f"PID Output -> x: {self.out_x}, y: {self.out_y}")
+        logger.debug(f"PID Output -> x-> P: {out_px}, I: {out_ix}, D: {out_dx}, y-> P: {out_py}, I: {out_iy}, D: {out_dy}")
         
         # Return -y as arm 2 - 3 math is reversed in Y
         #TODO fix this in IK
