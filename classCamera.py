@@ -152,6 +152,7 @@ class Camera:
             self.picam2.stop()
 
     def _process_image(self, frame):
+        small_frame = cv.resize(frame, self.small_frame_size)
         if self.camMat is not None and self.distCoefs is not None:
             # Scale camera matrix for downsampled image
             scale_x = self.small_frame_size[0] / self.camera_fov[0]
