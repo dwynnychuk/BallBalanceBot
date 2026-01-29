@@ -29,10 +29,10 @@ class Servo:
     """Main class for individual servo control
     """
     ### --- CLASS CONSTANTS --- ###
-    MIN_ANGLE: int = 16
-    MAX_ANGLE: int = 110
-    HOME_ANGLE_DEFAULT: int = 90
-    COORDINATE_OFFSET: int = 90
+    MIN_ANGLE: float = 16.0
+    MAX_ANGLE: float = 110.0
+    HOME_ANGLE_DEFAULT: float = 90.0
+    COORDINATE_OFFSET: float = 90.0
     SERVO_LOWER_PWM_LIMIT: int = 500
     SERVO_UPPER_PWM_LIMIT: int = 2500
     
@@ -45,11 +45,11 @@ class Servo:
         self.currentAngle = None
         logger.debug(f"ID: {self.id} Instantiated")
         
-    def _run_position_offset(self, position: int) -> int:
+    def _run_position_offset(self, position: float) -> float:
         """Adjust coordinate frame such that 0degrees is a horizontal arm"""
         return 90 - position
         
-    def rotate_absolute(self, position: int) -> int:        
+    def rotate_absolute(self, position: float) -> float:        
         """Rotates individual servo within MIN_ANGLE and MAX_ANGLE
 
         Args:
@@ -90,8 +90,8 @@ class Servo:
     @staticmethod
     def _initialize_servo_range(
         servo_hat, num_servos: int, 
-        lower_limit=None, 
-        upper_limit=None
+        lower_limit = None, 
+        upper_limit = None
         ) -> None:
         """Open up servo range to unlock full range of motion"""
         lower_limit = lower_limit if lower_limit is not None else Servo.SERVO_LOWER_PWM_LIMIT
@@ -115,7 +115,7 @@ class ServoGroup:
             servo.reset()
         logger.debug("All servos homed")
     
-    def rotate_all(self, angle: int) -> None:
+    def rotate_all(self, angle: float) -> None:
         """Rotate all servos to specified angle."""
         for servo in self.servos:
             servo.rotate_absolute(angle)
@@ -124,6 +124,31 @@ class ServoGroup:
     def get_servo(self, index: int) -> Servo:
         """Get individual servo control."""
         return self.servos[index]
+    
+    def apply_angles(self, angles: list[float]) -> list[float]:
+        """Rotate all servos in servo group by list of angles
+
+        Args:
+            angles (list[float]): angles to move servos
+
+        Raises:
+            ValueError: number of angles does not match number of servos available
+
+        Returns:
+            list[float]: Angles applied to each servo
+        """
+        if len(angles) != len(self.servos):
+            raise ValueError(
+                f"Expected {len(self.servos)} angles, got {len(angles)}"
+            )
+            
+        applied_angles = []
+        
+        for servo, angle in zip(self.servos, angles):
+            applied = servo.rotate_absolute(float(angle))
+            applied_angles.append(applied)
+        
+        return applied_angles
 
 def init_servos(num_servos: int) -> ServoGroup:
     """Initialize and home all servo objects

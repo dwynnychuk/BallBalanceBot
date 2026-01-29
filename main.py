@@ -86,8 +86,7 @@ def main(display: bool = False):
                 thetas = robot.kinematics_inv(nVec, desired_height)
                 
                 # Rotate Servos
-                for servo, theta in zip(servos, thetas):
-                    servo.rotate_absolute(int(theta))
+                servo_group.apply_angles(thetas)
                     
                 loop_time = (time.perf_counter() - loop_start)*1000
                 latency_log.append(loop_time)
