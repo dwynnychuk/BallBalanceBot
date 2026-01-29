@@ -121,33 +121,3 @@ class Robot:
     
 if __name__ == "__main__":
     robot = Robot()
-    servos = classServo.init_servos(3)
-    nVec = [0, 0, 1]  # flat platform   
-    h_min = 0.06
-    h_max = 0.12
-    h_step = 0.002
-
-    try:
-        h = h_min
-        direction = 1
-
-        while True:
-            thetas = robot.kinematics_inv(nVec, h)
-
-            logger.info(
-                f"Height: {h:.3f} m -> Angles: "
-                f"{[round(t,2) for t in thetas]}"
-            )
-
-            for servo, theta in zip(servos, thetas):
-                servo.rotate_absolute(int(theta))
-
-            time.sleep(0.5)
-
-            # Sweep height up and down
-            h += direction * h_step
-            if h >= h_max or h <= h_min:
-                direction *= -1
-
-    except KeyboardInterrupt:
-        pass

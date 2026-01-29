@@ -2,6 +2,7 @@ import classCamera
 import classControl
 import classRobot
 import classServo
+from classServo import ServoGroup
 from logger import get_logger
 import time
 import cv2 as cv
@@ -11,8 +12,13 @@ import argparse
 logger = get_logger(__name__)
 
 def main(display: bool = False):
-    # TODO servo init can be cleaned up
-    servos: list[classServo.Servo] = classServo.init_servos(3)
+    NUM_SERVOS: int = 3    
+    CONTROL_HZ = 60
+    CONTROL_DT = 1/CONTROL_HZ
+    MAX_TILT_RAD = math.radians(13)
+    TILT_THRES = 1e-6
+    
+    servo_group: ServoGroup = classServo.init_servos(NUM_SERVOS)
     cam = classCamera.Camera()
     pid = classControl.PID()
     robot = classRobot.Robot()
@@ -22,10 +28,6 @@ def main(display: bool = False):
     # Initial Conditions
     setpoint = [0,0]
     desired_height = 0.13     # approximation
-    CONTROL_HZ = 60
-    CONTROL_DT = 1/CONTROL_HZ
-    MAX_TILT_RAD = math.radians(13)
-    TILT_THRES = 1e-6
     last_update = time.perf_counter()
     iteration = 0
     
