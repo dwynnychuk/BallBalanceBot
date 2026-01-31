@@ -1,14 +1,28 @@
 from logger import get_logger
+from dataclasses import dataclass
+from typing import Tuple, Optional
 import time
 
 logger = get_logger(__name__)
 
+@dataclass 
+class PIDGains:
+    """PID gains"""
+    kp: float = 0.00006
+    ki: float = 0.0000002
+    kd: float = 0.0001
+    alpha: float = 0.7
+
 class PID:
-    def __init__(self):
-        self.kp = 0.00006
-        self.ki = 0.0000002
-        self.kd = 0.0001
-        self.alpha = 0.7
+    def __init__(
+        self,
+        gains: Optional[PIDGains] = None,
+        deadband: float = 15.0,
+        max_integral: float = 0.005
+    ):
+        self.gains = gains or PIDGains()
+        self.deadband = deadband
+        self.max_integral = max_integral
         self.t0 = None
         self.tn1 = None
         self.dt = None
@@ -22,8 +36,6 @@ class PID:
         self.integral_y = 0
         self.out_x = 0
         self.out_y = 0
-        self.deadband = 15
-        self.max_integral = 0.005
         logger.debug("PID class initialized")
         
         
@@ -64,16 +76,16 @@ class PID:
         vx_raw = (measurement[0] - self.prev_measurement_x)/dt
         vy_raw = (measurement[1] - self.prev_measurement_y)/dt
         
-        self.vel_x = self.alpha * self.vel_x + (1 - self.alpha) * vx_raw
-        self.vel_y = self.alpha * self.vel_y + (1 - self.alpha) * vy_raw
+        self.vel_x = self.gains.alpha * self.vel_x + (1 - self.gains.alpha) * vx_raw
+        self.vel_y = self.gains.alpha * self.vel_y + (1 - self.gains.alpha) * vy_raw
         
-        out_px = self.kp * error_x
-        out_ix = self.ki * self.integral_x
-        out_dx = - self.kd * self.vel_x
+        out_px = self.gains.kp * error_x
+        out_ix = self.gains.ki * self.integral_x
+        out_dx = - self.gains.kd * self.vel_x
         
-        out_py = self.kp * error_y
-        out_iy = self.ki * self.integral_y
-        out_dy = - self.kd * self.vel_y
+        out_py = self.gains.kp * error_y
+        out_iy = self.gains.ki * self.integral_y
+        out_dy = - self.gains.kd * self.vel_y
         
         self.out_x = out_px + out_ix + out_dx
         self.out_y = out_py + out_iy + out_dy
