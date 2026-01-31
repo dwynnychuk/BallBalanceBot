@@ -102,3 +102,14 @@ class PID:
         # Return -y as arm 2 - 3 math is reversed in Y
         #TODO fix this in IK
         return [-self.out_x, self.out_y]
+    
+    def _compute_axis_output():
+        pass
+    
+    def reset(self):
+        pass
+    
+    @staticmethod
+    def _clamp(value: float, min_value: float, max_value: float) -> float:
+        """Clamp value between minimum and maximum values"""
+        return max(min_value, min(value, max_value))
