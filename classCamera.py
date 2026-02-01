@@ -38,15 +38,22 @@ class Camera:
         self.detection_count = 0
         self.fps_start_time = time.perf_counter()
         
+        self._setup_camera()
+            
+    def _setup_camera(self) -> None:
+        """Setup Camera and load in calibrations."""
         try:
             from picamera2 import Picamera2
             self._is_pi_camera = True
             self.picam2 = Picamera2()
-
+            logger.info("Using Raspberry PI Camera")
         except:
             self._is_pi_camera = False
+            logger.info("Using Webcam")
+
+        self._calibration = self._load_calibration_data()
             
-    def _read_calibration_data(self) -> Optional[CalibrationData]:
+    def _load_calibration_data(self) -> Optional[CalibrationData]:
         """Load calibration data for the camera type being used
 
         Returns:
@@ -78,7 +85,7 @@ class Camera:
     def _get_camera(self):
         if self._is_pi_camera:
             # Rapsberry Pi
-            self.distCoefs, self.camMat = self._read_calibration_data()
+            self.distCoefs, self.camMat = self._load_calibration_data()
             
             picam2 = self.picam2
             
@@ -97,7 +104,7 @@ class Camera:
                 picam2.stop()
         else:
             # Mac
-            self.distCoefs, self.camMat = self._read_calibration_data()
+            self.distCoefs, self.camMat = self._load_calibration_data()
             cap = cv.VideoCapture(0)
             if not cap.isOpened():
                 logger.error("Cannot Open Webcam")
