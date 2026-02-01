@@ -13,101 +13,156 @@ class PIDGains:
     kd: float = 0.0001
     alpha: float = 0.7
 
+@dataclass
+class PIDState:
+    """State variables for the PID controller of a given axis"""
+    error: float = 0.0
+    velocity: float = 0.0
+    integral: float = 0.0
+    prev_measurement: Optional[float] = None
+
 class PID:
+    """Dual axis PID controller for ball balancing robot
+    """
     def __init__(
         self,
         gains: Optional[PIDGains] = None,
         deadband: float = 15.0,
         max_integral: float = 0.005
     ):
-        self.gains = gains or PIDGains()
+        self.gains = gains if gains is not None else PIDGains()
         self.deadband = deadband
         self.max_integral = max_integral
-        self.t0 = None
-        self.tn1 = None
-        self.dt = None
-        self.prev_error_x = 0
-        self.prev_error_y = 0
-        self.prev_measurement_x = None
-        self.prev_measurement_y = None
-        self.vel_x = 0
-        self.vel_y = 0
-        self.integral_x = 0
-        self.integral_y = 0
-        self.out_x = 0
-        self.out_y = 0
-        logger.debug("PID class initialized")
         
+        self.state_x = PIDState()
+        self.state_y = PIDState()
         
-    def compute_output(self, setpoint, measurement):
+        self.prev_time: Optional[float] = None
+        
+        logger.debug("PID initialized: "
+                     f"kp: {self.gains.kp}, "
+                     f"ki: {self.gains.ki}, "
+                     f"kd: {self.gains.kd}, "
+                     f"alpha: {self.gains.alpha}, "
+                     f"deadband px: {self.deadband}")
+        
+    def compute_output(
+        self, 
+        setpoint: Tuple[float, float], 
+        measurement: Tuple[float, float]
+        ) -> Tuple[float, float]:
         """
         Compute desired pose of platform
-        INPUTS:
-        OUTPUTS: 
-        TODO clamping
+        
+        Args:
+        
+        Returns:
+            Tuple of (x_out, y_out) PID controller for x and y axis
         """
-        self.t0 = time.perf_counter()
-        if self.tn1 is None:
-            self.tn1 = self.t0
-            self.prev_measurement_x = measurement[0]
-            self.prev_measurement_y = measurement[1]
-            return [self.out_x, self.out_y]
+        current_time = time.perf_counter()
+        
+        # Initialize first call or after reset
+        if self.prev_time is None:
+            self._initialize_state(measurement, current_time)
+            return (0.0, 0.0)
 
-        logger.debug(f"PID INPUT: x: {measurement[0]}, y: {measurement[1]}")
-        error_x = setpoint[0] - measurement[0]
-        error_y = setpoint[1] - measurement[1]
-        
-        if abs(error_x) < self.deadband:
-            error_x = 0
-        
-        if abs(error_y) < self.deadband:
-            error_y = 0
-        
-        dt = self.t0 - self.tn1
+        dt = current_time - self.prev_time
+        # Check dt
         if dt <= 0:
-            return [self.out_x, self.out_y]
+            logger.warning(f"Error: Invalid dt: {dt}, skipping control update")
+            return self._get_current_output()
         
-        self.integral_x += error_x * dt
-        self.integral_y += error_y * dt
+        # Log input
+        logger.debug(f"PID INPUT: x: {measurement[0]:.2f}, y: {measurement[1]:.2f}")
         
-        self.integral_x = max(-self.max_integral, min(self.max_integral, self.integral_x))
-        self.integral_y = max(-self.max_integral, min(self.max_integral, self.integral_y))
+        out_x = self._compute_axis_output(setpoint[0], measurement[0], self.state_x, dt, 'X')
+        out_y = self._compute_axis_output(setpoint[1], measurement[1], self.state_y, dt, 'Y')
         
-        vx_raw = (measurement[0] - self.prev_measurement_x)/dt
-        vy_raw = (measurement[1] - self.prev_measurement_y)/dt
+        self.prev_time = current_time
         
-        self.vel_x = self.gains.alpha * self.vel_x + (1 - self.gains.alpha) * vx_raw
-        self.vel_y = self.gains.alpha * self.vel_y + (1 - self.gains.alpha) * vy_raw
-        
-        out_px = self.gains.kp * error_x
-        out_ix = self.gains.ki * self.integral_x
-        out_dx = - self.gains.kd * self.vel_x
-        
-        out_py = self.gains.kp * error_y
-        out_iy = self.gains.ki * self.integral_y
-        out_dy = - self.gains.kd * self.vel_y
-        
-        self.out_x = out_px + out_ix + out_dx
-        self.out_y = out_py + out_iy + out_dy
-        
-        self.prev_error_x = error_x
-        self.prev_error_y = error_y
-        
-        self.prev_measurement_x = measurement[0]
-        self.prev_measurement_y = measurement[1]
-        self.tn1 = self.t0
-        
-        logger.debug(f"PID Output -> x-> P: {out_px}, I: {out_ix}, D: {out_dx}, y-> P: {out_py}, I: {out_iy}, D: {out_dy}")
-        
-        # Return -y as arm 2 - 3 math is reversed in Y
-        #TODO fix this in IK
-        return [-self.out_x, self.out_y]
+        return [-out_x, out_y]
     
-    def _compute_axis_output():
-        pass
+    def _compute_axis_output(self,
+                             setpoint: float,
+                             measurement: float,
+                             state: PIDState, 
+                             dt: float,
+                             axis_name: str
+                             ) -> float:
+        """_summary_
+
+        Args:
+            setpoint (float): Desired position
+            measurement (float): Current position
+            state (PIDState): PID state for this axis
+            dt (float): Time between control iterations
+            axis_name (str): 'X' or 'Y' axis
+
+        Returns:
+            float: Control output
+        """
+        error: float = setpoint - measurement
+        
+        if abs(error) < self.deadband:
+            error = 0.0
+        
+        # Calculate integral term with windup clamping
+        state.integral += error * dt
+        state.integral = self._clamp(state.integral, -self.max_integral, self.max_integral)
+        
+        # Calculate derivative value with filtering
+        if state.prev_measurement is not None:
+            velocity_raw = (measurement - state.prev_measurement) / dt
+            state.velocity = self.gains.alpha * state.velocity + (1 - self.gains.alpha) * velocity_raw
+        
+        # Compute PID
+        out_p = self.gains.kp * error
+        out_i = self.gains.ki * state.integral
+        out_d = -self.gains.kd * state.velocity
+        
+        output = out_p + out_i + out_d
+        
+        # Update state
+        state.error = error
+        state.prev_measurement = measurement
+        
+        logger.debug(f"PID OUTPUT {axis_name} AXIS: P: {out_p}, I: {out_i}, D: {out_d} -> Total: {output}")
+        
+        return output
     
-    def reset(self):
-        pass
+    def _initialize_state(self, measurement: Tuple[float, float], current_time: float) -> None:
+        """Initialize state of PID controller
+
+        Args:
+            measurement (Tuple[float, float]): Measured position
+            current_time (float): Time of initialization
+        """
+        self.state_x.prev_measurement = measurement[0]
+        self.state_y.prev_measurement = measurement[1]
+        self.prev_time = current_time
+        logger.debug("PID State initialized")
+    
+    def _get_current_output(self) -> Tuple[float, float]:
+        """Calculate and output current state of PID controller
+
+        Returns:
+            Tuple[float, float]: PID output based on current state
+        """
+        out_x = (self.gains.kp * self.state_x.error +
+                 self.gains.ki * self.state_x.integral - 
+                 self.gains.kd * self.state_x.velocity)
+        out_y = (self.gains.kp * self.state_y.error +
+                 self.gains.ki * self.state_y.integral - 
+                 self.gains.kd * self.state_y.velocity)
+        
+        return (-out_x, out_y)
+    
+    def reset(self) -> None:
+        """Reset PID controller for fresh slate"""
+        self.state_x = PIDState()
+        self.state_y = PIDState()
+        self.prev_time = None
+        logger.debug("PID Controller Reset")
     
     @staticmethod
     def _clamp(value: float, min_value: float, max_value: float) -> float:
