@@ -2,10 +2,18 @@ import cv2 as cv
 import os
 import numpy as np
 import threading
-from logger import get_logger
 import time
+from logger import get_logger
+from dataclasses import dataclass
+from typing import Optional, Tuple, List, Generator
 
 logger = get_logger(__name__)
+
+@dataclass
+class CalibrationData:
+    """Dataclass to hold calibration data"""
+    camera_matrix: np.ndarray
+    distortion_coefficients: np.ndarray
 
 class Camera:
     def __init__(self):
@@ -32,33 +40,45 @@ class Camera:
         
         try:
             from picamera2 import Picamera2
-            self.PiCameraAvailable = True
+            self._is_pi_camera = True
             self.picam2 = Picamera2()
 
         except:
-            self.PiCameraAvailable = False
+            self._is_pi_camera = False
             
-    def _read_calibration_data(self, camType):
-        if camType == "MAC":
-            dist = np.array([-8.49216396e-03,3.08034351e-01, -3.88908240e-03, 1.96616800e-04, -8.78991630e-01])
-            cam = np.array([[1.41705209e+03, 0.00000000e+00, 9.60026636e+02],
-                            [0.00000000e+00, 1.41704256e+03, 5.45224992e+02],
-                            [0.00000000e+00, 0.00000000e+00, 1.00000000e+00]])
-            
-        elif camType == "PI":
-            calib = "calibration/pi_camera_calibration.npz"
-            if not os.path.exists(calib):
-                logger.warning("Pi camera calibration not available: File not found")
-                return None, None
-            data = np.load(calib)
-            dist, cam = data["distortion_coefficients"], data["camera_matrix"]
-            
-        return dist, cam
+    def _read_calibration_data(self) -> Optional[CalibrationData]:
+        """Load calibration data for the camera type being used
+
+        Returns:
+            Optional[CalibrationData]: Camera Calibration data
+        """
+        if self._is_pi_camera:
+            calib_path = "calibration/pi_camera_calibration.npz"
+            if not os.path.exists(calib_path):
+                logger.warning(f"Pi camera calibration not available: File not found: {calib_path}")
+                return None
+            data = np.load(calib_path)
+            return CalibrationData(
+                camera_matrix=data["camera_matrix"],
+                distortion_coefficients=data["distortion_coefficients"]
+            )
+        else:
+            # TODO -> Move this to a file
+            return CalibrationData(
+                camera_matrix = np.array([
+                    [1.41705209e+03, 0.00000000e+00, 9.60026636e+02],
+                    [0.00000000e+00, 1.41704256e+03, 5.45224992e+02],
+                    [0.00000000e+00, 0.00000000e+00, 1.00000000e+00]
+                    ]),
+                distortion_coefficients = np.array(
+                    [-8.49216396e-03,3.08034351e-01, -3.88908240e-03, 1.96616800e-04, -8.78991630e-01]
+                    )
+            )
 
     def _get_camera(self):
-        if self.PiCameraAvailable:
+        if self._is_pi_camera:
             # Rapsberry Pi
-            self.distCoefs, self.camMat = self._read_calibration_data("PI")
+            self.distCoefs, self.camMat = self._read_calibration_data()
             
             picam2 = self.picam2
             
@@ -77,7 +97,7 @@ class Camera:
                 picam2.stop()
         else:
             # Mac
-            self.distCoefs, self.camMat = self._read_calibration_data("MAC")
+            self.distCoefs, self.camMat = self._read_calibration_data()
             cap = cv.VideoCapture(0)
             if not cap.isOpened():
                 logger.error("Cannot Open Webcam")
@@ -148,7 +168,7 @@ class Camera:
         
     def stop(self):
         self.running = False
-        if self.PiCameraAvailable:
+        if self._is_pi_camera:
             self.picam2.stop()
 
     def _process_image(self, frame):
