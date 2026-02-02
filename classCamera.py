@@ -15,14 +15,35 @@ class CalibrationData:
     camera_matrix: np.ndarray
     distortion_coefficients: np.ndarray
 
+@dataclass
+class CameraConfig:
+    """Camera configuration parameters"""
+    resolution: Tuple[int, int] = (1280, 720)
+    downscale_factor: float = 2.0
+    target_fps: int = 60
+    buffer_size: int = 1
+
 class Camera:
-    def __init__(self):
-        # import picamera2 only if used on raspberry pi
-        self.hsv_lower = np.array([10, 50, 5])      # need to tune after cad complete
-        self.hsv_upper = np.array([40, 255, 100])    # need to tune after cad 
+    def __init__(
+        self,
+        camera_config: Optional[CameraConfig] = None,
+    ):
+        """
+
+        Args:
+            camera_config (Optional[CameraConfig], optional): _description_. Defaults to None.
+        """
+        self.camera_config = camera_config if camera_config is not None else CameraConfig()
+        
+        # Derived Values
+        self.small_frame_size = (
+            int(self.camera_config.resolution[0] / self.camera_config.downscale_factor),
+            int(self.camera_config.resolution[1] / self.camera_config.downscale_factor)
+        )
+        
+        self.hsv_lower = np.array([10, 50, 5])     
+        self.hsv_upper = np.array([40, 255, 100])    
         self.camera_fov = (1280, 720)
-        self.scale = 4.0
-        self.small_frame_size = (int(self.camera_fov[0]/self.scale), int(self.camera_fov[1]/self.scale))
         self.kernel_shape = (5,5)
         self.contour_area_threshold = 10000
         self.radius_threshold = [50, 400]
@@ -33,11 +54,12 @@ class Camera:
         self.t0 = time.perf_counter()  
         self.tn1 = time.perf_counter() - 1
         self.latest_frame = None
-        self.running = True
+        self._running = True
         self.frame_count = 0
         self.detection_count = 0
         self.fps_start_time = time.perf_counter()
         
+        # Setup functions
         self._setup_camera()
             
     def _setup_camera(self) -> None:
@@ -45,7 +67,7 @@ class Camera:
         try:
             from picamera2 import Picamera2
             self._is_pi_camera = True
-            self.picam2 = Picamera2()
+            self._picam2 = Picamera2()
             logger.info("Using Raspberry PI Camera")
         except:
             self._is_pi_camera = False
@@ -82,50 +104,64 @@ class Camera:
                     )
             )
 
-    def _get_camera(self):
+    def _get_camera_frames(self) -> Generator[Tuple[np.ndarray, float], None, None]:
+        """wrapper function to yield frames from proper source
+
+        Yields:
+            Tuple of (frame, timestamp)
+        """
         if self._is_pi_camera:
-            # Rapsberry Pi
-            self.distCoefs, self.camMat = self._load_calibration_data()
-            
-            picam2 = self.picam2
-            
-            config = picam2.create_video_configuration(main={"size": self.camera_fov}, 
-                                                       buffer_count=2)
-
-            picam2.configure(config)
-            picam2.start()
-
-            try:
-                while self.running:
-                    frame_rgb = picam2.capture_array()
-                    frame_bgr = cv.cvtColor(frame_rgb, cv.COLOR_RGB2BGR)
-                    yield frame_bgr, time.perf_counter()
-            finally:
-                picam2.stop()
+            yield from self._get_pi_camera_frames()
         else:
-            # Mac
-            self.distCoefs, self.camMat = self._load_calibration_data()
-            cap = cv.VideoCapture(0)
-            if not cap.isOpened():
-                logger.error("Cannot Open Webcam")
-                raise RuntimeError("Cannot Open Webcam")
-            
-            cap.set(cv.CAP_PROP_BUFFERSIZE, 1)
-            cap.set(cv.CAP_PROP_FPS, 60)
-            
-            try:
-                while self.running:
-                    ret, frame = cap.read()
-                    if not ret:
-                        logger.error("Failed to get frame")
-                        break
-                    yield frame, time.perf_counter()
-            finally:
-                cap.release()
+            yield from self._get_webcam_frames()
+    
+    def _get_pi_camera_frames(self) -> Generator[Tuple[np.ndarray, float], None, None]:
+        """Get frames using raspberry pi camera
+
+        Yields:
+            Tuple of (frame, timestamp)
+        """
+        config = self._picam2.create_video_configuration(
+            main={"size": self.camera_config.resolution}, 
+            buffer_count = self.camera_config.buffer_size
+            )
+        self._picam2.configure(config)
+        self._picam2.start()
+        
+        try:
+            while self._running:
+                frame_rgb = self._picam2.capture_array()
+                frame_bgr = cv.cvtColor(frame_rgb, cv.COLOR_RGB2BGR)
+                yield frame_bgr, time.perf_counter()
+        finally:
+            self._picam2.stop()
+    
+    def _get_webcam_frames(self) -> Generator[Tuple[np.ndarray, float], None, None]:
+        """Get frames using webcam
+
+        Yields:
+            Tuple of (frame, timestamp)
+        """
+        cap = cv.VideoCapture(0)
+        if not cap.isOpened():
+            raise RuntimeError("Cannot open webcam")
+        
+        cap.set(cv.CAP_PROP_BUFFERSIZE, self.camera_config.buffer_size)
+        cap.set(cv.CAP_PROP_FPS, self.camera_config.target_fps)
+        
+        try:
+            while self._running:
+                ret, frame = cap.read()
+                if not ret:
+                    logger.error("Failed to read frame from webcam")
+                    break
+                yield frame, time.perf_counter()
+        finally:
+            cap.release()
 
     def _capture_camera(self):
-        for frame, timestamp in self._get_camera():
-            if not self.running:
+        for frame, timestamp in self._get_camera_frames():
+            if not self._running:
                 break
             self.frame_count += 1
             self.latest_frame = frame
@@ -174,7 +210,7 @@ class Camera:
         logger.debug("Camera Thread Started")
         
     def stop(self):
-        self.running = False
+        self._running = False
         if self._is_pi_camera:
             self.picam2.stop()
 
@@ -212,13 +248,13 @@ class Camera:
         for contour in contours:
             area = cv.contourArea(contour)
             # Adjust area threshold based on scaling
-            if area > (self.contour_area_threshold / (self.scale**2)):
+            if area > (self.contour_area_threshold / (self.camera_config.downscale_factor**2)):
                 (x,y), radius = cv.minEnclosingCircle(contour)
                 
                 # scale to original coordinates
-                x *= self.scale
-                y *= self.scale
-                radius *= self.scale
+                x *= self.camera_config.downscale_factor
+                y *= self.camera_config.downscale_factor
+                radius *= self.camera_config.downscale_factor
                 
                 center = (int(x), int(y))
                 radius = int(radius)
@@ -242,8 +278,8 @@ class Camera:
         return self.latest_ball_pos
 
     def _adjust_ball_coordinate_frame(self, ball: list) -> list:
-        x_c = int(self.camera_fov[0]/2)
-        y_c = int(self.camera_fov[1]/2)
+        x_c = int(self.camera_config.resolution[0]/2)
+        y_c = int(self.camera_config.resolution[1]/2)
         x_cam = ball[0] - x_c
         y_cam = ball[1] - y_c
         x_cad = y_cam
