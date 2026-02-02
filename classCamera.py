@@ -29,7 +29,8 @@ class Camera:
         camera_config: Optional[CameraConfig] = None,
     ):
         """
-
+        Main camera interfact for ball detection in ball balancing robot
+        
         Args:
             camera_config (Optional[CameraConfig], optional): _description_. Defaults to None.
         """
@@ -41,6 +42,14 @@ class Camera:
             int(self.camera_config.resolution[1] / self.camera_config.downscale_factor)
         )
         
+        # Threading safety
+        self._lock = threading.Lock()
+        
+        # Statistics
+        self._frame_count = 0
+        self._detection_count = 0
+        self._stats_start_time = time.perf_counter()
+        
         self.hsv_lower = np.array([10, 50, 5])     
         self.hsv_upper = np.array([40, 255, 100])    
         self.camera_fov = (1280, 720)
@@ -48,16 +57,13 @@ class Camera:
         self.contour_area_threshold = 10000
         self.radius_threshold = [50, 400]
         self.kernel = cv.getStructuringElement(cv.MORPH_ELLIPSE, self.kernel_shape)
-        self.latest_ball_pos = None
+        self._latest_ball = None
         self.latest_ball_timestamp = None
-        self.frame_timestamp = None
+        self._frame_timestamp = None
         self.t0 = time.perf_counter()  
         self.tn1 = time.perf_counter() - 1
-        self.latest_frame = None
+        self._latest_frame = None
         self._running = True
-        self.frame_count = 0
-        self.detection_count = 0
-        self.fps_start_time = time.perf_counter()
         
         # Setup functions
         self._setup_camera()
@@ -159,32 +165,35 @@ class Camera:
         finally:
             cap.release()
 
-    def _capture_camera(self):
-        for frame, timestamp in self._get_camera_frames():
-            if not self._running:
-                break
-            self.frame_count += 1
-            self.latest_frame = frame
-            self.frame_timestamp = timestamp
-            
-            processed = self._process_image(frame)
-            bal_pos = self._find_ball(processed, unprocessed=frame.copy())
-            
-            if bal_pos is not None:
-                self.latest_ball_pos = bal_pos
-                self.latest_ball_timestamp = time.perf_counter()
-                self.detection_count += 1
-            
-            # log every 100 frames
-            if self.frame_count % 100 == 0:
-                elapsed = time.perf_counter() - self.fps_start_time
-                fps = 1.0 / elapsed
-                logger.info(f"Camera FPS: {fps:.1f}")
-                detection_rate = (self.detection_count / self.frame_count) * 100
-                logger.info(f"Camera: {fps:.1f} FPS, {detection_rate:.1f}% detection rate")
-                self.fps_start_time = time.perf_counter()
-            
-        cv.destroyAllWindows()
+    def _capture_loop(self):
+        """Main capture loop to generate frames inside background thread"""
+        try:
+            for frame, timestamp in self._get_camera_frames():
+                if not self._running:
+                    break
+                
+                self._frame_count += 1
+                
+                processed = self._process_frame(frame)
+                ball = self._detect_ball(processed, frame)                
+                
+                with self._lock:
+                    self._latest_frame = frame
+                    self._frame_timestamp = timestamp
+                
+                    if ball is not None:
+                        self._latest_ball = ball
+                        self._detection_count += 1
+                
+                # log every 100 frames
+                if self._frame_count % 100 == 0:
+                    self._log_statistics()
+                    
+        except Exception as e:
+            logger.error(f"Camera thread crashed: {e}")
+        finally:
+            cv.destroyAllWindows()
+            logger.info("Camera frame stopped")
 
     @property
     def delta_t(self):
@@ -193,9 +202,9 @@ class Camera:
     @property
     def frame_age(self):
         """How old is the latest frame?"""
-        if self.frame_timestamp is None:
+        if self._frame_timestamp is None:
             return None
-        return time.perf_counter() - self.frame_timestamp
+        return time.perf_counter() - self._frame_timestamp
     
     @property
     def ball_age(self):
@@ -205,7 +214,7 @@ class Camera:
         return time.perf_counter() - self.latest_ball_timestamp
 
     def start(self):
-        self.thread = threading.Thread(None,target=self._capture_camera, daemon=True)
+        self.thread = threading.Thread(None,target=self._capture_loop, daemon=True)
         self.thread.start()
         logger.debug("Camera Thread Started")
         
@@ -214,7 +223,7 @@ class Camera:
         if self._is_pi_camera:
             self.picam2.stop()
 
-    def _process_image(self, frame):
+    def _process_frame(self, frame):
         small_frame = cv.resize(frame, self.small_frame_size)
         if self.camMat is not None and self.distCoefs is not None:
             # Scale camera matrix for downsampled image
@@ -239,7 +248,7 @@ class Camera:
 
         return mask
     
-    def _find_ball(self, frame, unprocessed = None):
+    def _detect_ball(self, frame, unprocessed = None):
         """Detect Blobs to find contour of ball
             OUTPUT: Ball [x, y, radius]"""
         contours, _ = cv.findContours(frame, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
@@ -268,14 +277,27 @@ class Camera:
                     self.tn1 = self.t0
                     self.t0 = time.perf_counter()
                     
-                    if self.frame_count % 30 == 0:
+                    if self._frame_count % 30 == 0:
                         logger.debug(f"Ball Pos: {ball}, Time: {self.delta_t*1000:.1f}")
                         
                     return ball
         return ball 
 
+    def _log_statistics(self) -> None:
+        """Log camera performance"""
+        elapsed = time.perf_counter() - self_stats_start_time
+        fps = 100 / elapsed
+        detection_rate = (self._detection_count / self._frame_count) * 100
+        
+        logger.info(
+            f"Camera: {fps:.1f} FPS, {detection_rate:.1f}% detection rate "
+            f"({self._detection_count}/{self._frame_count} frames)"
+            )
+        
+        self_stats_start_time = time.perf_counter()
+
     def get_ball_position(self):
-        return self.latest_ball_pos
+        return self._latest_ball
 
     def _adjust_ball_coordinate_frame(self, ball: list) -> list:
         x_c = int(self.camera_config.resolution[0]/2)
@@ -292,9 +314,9 @@ if __name__ == "__main__":
     cam.start()
     try:
         while True:
-            frame = cam.latest_frame
+            frame = cam._latest_frame
             if frame is not None:
-                cv.imshow("frame", cam.latest_frame)
+                cv.imshow("frame", cam._latest_frame)
                 if cam.get_ball_position():
                     pass
             if cv.waitKey(1) & 0xFF == 27:
