@@ -275,40 +275,63 @@ class Camera:
             self._calibration.distortion_coefficients
             )
 
-    def _detect_ball(self, frame, unprocessed = None):
-        """Detect Blobs to find contour of ball
-            OUTPUT: Ball [x, y, radius]"""
-        contours, _ = cv.findContours(frame, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
-        ball = None
+    def _detect_ball(
+        self, 
+        mask: np.ndarray, 
+        original_frame = None
+        ) -> Optional[BallPosition]:
+        """_summary_
+
+        Args:
+            mask (np.ndarray): _description_
+            original_frame (_type_, optional): _description_. Defaults to None.
+
+        Returns:
+            Optional[BallPosition]: _description_
+        """
+        contours, _ = cv.findContours(mask, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
         
         for contour in contours:
             area = cv.contourArea(contour)
+            
             # Adjust area threshold based on scaling
-            if area > (self.detection_config.min_contour_area / (self.camera_config.downscale_factor**2)):
-                (x,y), radius = cv.minEnclosingCircle(contour)
-                
-                # scale to original coordinates
-                x *= self.camera_config.downscale_factor
-                y *= self.camera_config.downscale_factor
-                radius *= self.camera_config.downscale_factor
-                
+            min_area = self.detection_config.min_contour_area / (
+                self.camera_config.downscale_factor ** 2
+            )
+            
+            if area < min_area:
+                continue
+            
+            # Get circle parameters
+            (x,y), radius = cv.minEnclosingCircle(contour)
+            
+            # Scale back to original coordinates
+            x *= self.camera_config.downscale_factor
+            y *= self.camera_config.downscale_factor
+            radius *= self.camera_config.downscale_factor
+            
+            # Check radius within bounds
+            if not (self.detection_config.min_radius < radius < self.detection_config.max_radius):
+                continue
+            
+            # Visualize if enabled
+            if self.enable_visualization:
                 center = (int(x), int(y))
-                radius = int(radius)
+                cv.circle(original_frame, center, int(radius), (0, 0, 255), 3)
+                cv.circle(original_frame, center, 5, (255,0,0), -1)  # draw point at middle of ball
                 
-                if self.detection_config.min_radius < radius < self.detection_config.max_radius:
-                    #if unprocessed is not None:
-                        #cv.drawContours(unprocessed,contour, -1, (255,255,0),4)
-                    #    cv.circle(unprocessed, center, radius,(0, 0, 255),3)
-                    #    cv.circle(unprocessed, center, 5, (255,0,0),10)  # draw point at middle of ball
-                    ball = [center[0], center[1], radius]
-                    self.tn1 = self.t0
-                    self.t0 = time.perf_counter()
+            # Log periodically
+            if self._frame_count % 100 == 0:
+                logger.debug(f"Ball Detected at:  ({x:.1f}, {y:.1f}), r = {radius:.1f}")
                     
-                    if self._frame_count % 30 == 0:
-                        logger.debug(f"Ball Pos: {ball}, Time: {self.delta_t*1000:.1f}")
-                        
-                    return ball
-        return ball 
+                return BallPosition(
+                    x = x,
+                    y = y,
+                    radius = radius,
+                    timestamp = time.perf_counter()
+                )
+                
+        return None
 
     @property
     def frame_age(self):
