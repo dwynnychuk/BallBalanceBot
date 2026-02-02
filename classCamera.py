@@ -23,10 +23,42 @@ class CameraConfig:
     target_fps: int = 60
     buffer_size: int = 1
 
+@dataclass
+class BallDetectionConfig:
+    """Ball Detection Parameters"""
+    hsv_lower: np.ndarray = None
+    hsv_upper: np.ndarray = None
+    morphology_kernal_size: Tuple[int, int] = (5,5)
+    min_contour_area: int = 10000
+    min_radius: int = 50
+    max_radius: int = 400
+    
+    def __post_init__(self):
+        if self.hsv_lower is None:
+            self.hsv_lower = np.array([10, 50, 5])
+        if self.hsv_upper is None:
+            self.hsv_upper = np.array([40, 255, 100])
+        
+@dataclass 
+class BallPosition:
+    """Paramters defining ball position and timing"""
+    x: float
+    y: float
+    radius: float
+    timestamp: float
+    
+    def age(self) -> float:
+        return time.perf_counter() - self.timestamp
+    
+    def to_list(self) -> List[float]:
+        return [self.x, self.y, self.radius]
+
 class Camera:
     def __init__(
         self,
         camera_config: Optional[CameraConfig] = None,
+        detection_config: Optional[BallDetectionConfig] = None,
+        enable_visualization: bool = False
     ):
         """
         Main camera interfact for ball detection in ball balancing robot
@@ -35,6 +67,8 @@ class Camera:
             camera_config (Optional[CameraConfig], optional): _description_. Defaults to None.
         """
         self.camera_config = camera_config if camera_config is not None else CameraConfig()
+        self.detection_config = detection_config if detection_config is not None else BallDetectionConfig()
+        self.enable_visualization = enable_visualization
         
         # Derived Values
         self.small_frame_size = (
@@ -42,28 +76,29 @@ class Camera:
             int(self.camera_config.resolution[1] / self.camera_config.downscale_factor)
         )
         
+        # Camera morphology
+        self.kernel = cv.getStructuringElement(
+            cv.MORPH_ELLIPSE, 
+            self.detection_config.morphology_kernal_size
+            )
+        
         # Threading safety
         self._lock = threading.Lock()
+        self._latest_frame = None
+        self._frame_timestamp = None
+        self._latest_ball = None
+        
+        # Threading Control
+        self._thread: Optional[threading.Thread] = None
+        self._running: bool = False 
         
         # Statistics
         self._frame_count = 0
         self._detection_count = 0
         self._stats_start_time = time.perf_counter()
         
-        self.hsv_lower = np.array([10, 50, 5])     
-        self.hsv_upper = np.array([40, 255, 100])    
-        self.camera_fov = (1280, 720)
-        self.kernel_shape = (5,5)
-        self.contour_area_threshold = 10000
-        self.radius_threshold = [50, 400]
-        self.kernel = cv.getStructuringElement(cv.MORPH_ELLIPSE, self.kernel_shape)
-        self._latest_ball = None
-        self.latest_ball_timestamp = None
-        self._frame_timestamp = None
         self.t0 = time.perf_counter()  
         self.tn1 = time.perf_counter() - 1
-        self._latest_frame = None
-        self._running = True
         
         # Setup functions
         self._setup_camera()
@@ -166,7 +201,7 @@ class Camera:
             cap.release()
 
     def _capture_loop(self):
-        """Main capture loop to generate frames inside background thread"""
+        """Main capture loop to generate frames inside background _thread"""
         try:
             for frame, timestamp in self._get_camera_frames():
                 if not self._running:
@@ -190,64 +225,56 @@ class Camera:
                     self._log_statistics()
                     
         except Exception as e:
-            logger.error(f"Camera thread crashed: {e}")
+            logger.error(f"Camera _thread crashed: {e}")
         finally:
             cv.destroyAllWindows()
             logger.info("Camera frame stopped")
 
-    @property
-    def delta_t(self):
-        return self.t0 - self.tn1
-    
-    @property
-    def frame_age(self):
-        """How old is the latest frame?"""
-        if self._frame_timestamp is None:
-            return None
-        return time.perf_counter() - self._frame_timestamp
-    
-    @property
-    def ball_age(self):
-        """How old is the latest ball detection?"""
-        if self.latest_ball_timestamp is None:
-            return None
-        return time.perf_counter() - self.latest_ball_timestamp
-
-    def start(self):
-        self.thread = threading.Thread(None,target=self._capture_loop, daemon=True)
-        self.thread.start()
-        logger.debug("Camera Thread Started")
-        
-    def stop(self):
-        self._running = False
-        if self._is_pi_camera:
-            self.picam2.stop()
-
-    def _process_frame(self, frame):
+    def _process_frame(self, frame: np.ndarray) -> np.ndarray:
+        """"""
         small_frame = cv.resize(frame, self.small_frame_size)
-        if self.camMat is not None and self.distCoefs is not None:
-            # Scale camera matrix for downsampled image
-            scale_x = self.small_frame_size[0] / self.camera_fov[0]
-            scale_y = self.small_frame_size[1] / self.camera_fov[1]
-            scaled_cam = self.camMat.copy()
-            scaled_cam[0, 0] *= scale_x  # fx
-            scaled_cam[1, 1] *= scale_y  # fy
-            scaled_cam[0, 2] *= scale_x  # cx
-            scaled_cam[1, 2] *= scale_y  # cy
-            
-            small_frame = cv.undistort(small_frame, scaled_cam, self.distCoefs)
         
-        small_frame = cv.resize(frame, self.small_frame_size)
+        if self._calibration is not None:
+            small_frame = self._undistort_frame(small_frame)
+        
+        # Threshold by color
         hsv = cv.cvtColor(small_frame, cv.COLOR_BGR2HSV)
-        mask = cv.inRange(hsv,self.hsv_lower, self.hsv_upper)
+        mask = cv.inRange(
+            hsv,
+            self.detection_config.hsv_lower, 
+            self.detection_config.hsv_upper
+            )
         
-        # reduce morphology operations
+        # Morphology operations
         mask = cv.morphologyEx(mask, cv.MORPH_OPEN, self.kernel)
         mask = cv.morphologyEx(mask, cv.MORPH_CLOSE, self.kernel)
-        #logger.debug("HSV at center:", hsv[hsv.shape[0]//2, hsv.shape[1]//2])
 
         return mask
-    
+
+    def _undistort_frame(self, frame: np.ndarray) -> np.ndarray:
+        """Undistort single frame with camera calibration matrix
+
+        Args:
+            frame (np.ndarray): raw frame
+
+        Returns:
+            np.ndarray: undistorted frame
+        """
+        scale_x = self.small_frame_size[0] / self.camera_config.resolution[0]
+        scale_y = self.small_frame_size[1] / self.camera_config.resolution[1]
+        
+        scaled_cam_matrix = self._calibration.camera_matrix.copy()
+        scaled_cam_matrix[0, 0] *= scale_x  # fx
+        scaled_cam_matrix[1, 1] *= scale_y  # fy
+        scaled_cam_matrix[0, 2] *= scale_x  # cx
+        scaled_cam_matrix[1, 2] *= scale_y  # cy
+        
+        return cv.undistort(
+            frame, 
+            scaled_cam_matrix, 
+            self._calibration.distortion_coefficients
+            )
+
     def _detect_ball(self, frame, unprocessed = None):
         """Detect Blobs to find contour of ball
             OUTPUT: Ball [x, y, radius]"""
@@ -257,7 +284,7 @@ class Camera:
         for contour in contours:
             area = cv.contourArea(contour)
             # Adjust area threshold based on scaling
-            if area > (self.contour_area_threshold / (self.camera_config.downscale_factor**2)):
+            if area > (self.detection_config.min_contour_area / (self.camera_config.downscale_factor**2)):
                 (x,y), radius = cv.minEnclosingCircle(contour)
                 
                 # scale to original coordinates
@@ -268,7 +295,7 @@ class Camera:
                 center = (int(x), int(y))
                 radius = int(radius)
                 
-                if self.radius_threshold[0] < radius < self.radius_threshold[1]:
+                if self.detection_config.min_radius < radius < self.detection_config.max_radius:
                     #if unprocessed is not None:
                         #cv.drawContours(unprocessed,contour, -1, (255,255,0),4)
                     #    cv.circle(unprocessed, center, radius,(0, 0, 255),3)
@@ -282,6 +309,31 @@ class Camera:
                         
                     return ball
         return ball 
+
+    @property
+    def frame_age(self):
+        """How old is the latest frame?"""
+        if self._frame_timestamp is None:
+            return None
+        return time.perf_counter() - self._frame_timestamp
+    
+    @property
+    def ball_age(self) -> Optional[float]:
+        """How old is the latest ball detection"""
+        ball = self.get_ball_position()
+        if ball is None:
+            return None
+        return ball.age()
+
+    def start(self):
+        self._thread = threading.Thread(None,target=self._capture_loop, daemon=True)
+        self._thread.start()
+        logger.debug("Camera Thread Started")
+        
+    def stop(self):
+        self._running = False
+        if self._is_pi_camera:
+            self.picam2.stop()
 
     def _log_statistics(self) -> None:
         """Log camera performance"""
