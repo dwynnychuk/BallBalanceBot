@@ -385,6 +385,11 @@ class Camera:
             return self._latest_ball
 
     def get_ball_position_camera_frame(self) -> Optional[List[float]]:
+        """Get ball position in camera coordinate frame
+
+        Returns:
+            [x_ball, y_ball, radius_ball] in camera frame of None if no ball
+        """
         ball = self.get_ball_position()
         if ball is None:
             return None
@@ -399,6 +404,12 @@ class Camera:
         return [x_cam, y_cam, ball.radius]
 
     def get_ball_position_robot_frame(self) -> Optional[List[float]]:
+        """Get ball position in robot coordinate frame
+            Robot frame is 90 degrees CCW from camera frame due to mechanical mode
+            
+        Returns:
+            [x_ball, y_ball, radius_ball] in robot frame of None if no ball
+        """
         cam_pos = self.get_ball_position_camera_frame()
         if cam_pos is None:
             return None
@@ -429,6 +440,15 @@ class Camera:
     def is_running(self) -> bool:
         """Check if camera thread is running"""
         return self._running
+
+    def __enter__(self):
+        """Context manager support."""
+        self.start()
+        return self
+    
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """Context manager support."""
+        self.stop()
 
 if __name__ == "__main__":
     cam = Camera()
