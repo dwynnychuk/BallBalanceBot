@@ -375,8 +375,14 @@ class Camera:
         
         self_stats_start_time = time.perf_counter()
 
-    def get_ball_position(self):
-        return self._latest_ball
+    def get_ball_position(self) -> Optional[BallPosition]:
+        """Get latest ball position thread safely
+
+        Returns:
+            BallPosition or None if no ball detected
+        """
+        with self._lock:
+            return self._latest_ball
 
     def _adjust_ball_coordinate_frame(self, ball: list) -> list:
         x_c = int(self.camera_config.resolution[0]/2)
@@ -389,19 +395,25 @@ class Camera:
         return [x_cad, y_cad, ball[2]]    
     
     @property
-    def frame_age(self):
-        """How old is the latest frame?"""
-        if self._frame_timestamp is None:
-            return None
-        return time.perf_counter() - self._frame_timestamp
+    def frame_age(self) -> Optional[float]:
+        """Get age of latest frame"""
+        with self._lock:
+            if self._frame_timestamp is None:
+                return None
+            return time.perf_counter() - self._frame_timestamp
     
     @property
     def ball_age(self) -> Optional[float]:
-        """How old is the latest ball detection"""
+        """Get age of latest ball detection"""
         ball = self.get_ball_position()
         if ball is None:
             return None
         return ball.age()    
+
+    @property
+    def is_running(self) -> bool:
+        """Check if camera thread is running"""
+        return self._running
 
 if __name__ == "__main__":
     cam = Camera()
