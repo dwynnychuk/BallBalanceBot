@@ -28,7 +28,7 @@ class BallDetectionConfig:
     """Ball Detection Parameters"""
     hsv_lower: np.ndarray = None
     hsv_upper: np.ndarray = None
-    morphology_kernal_size: Tuple[int, int] = (5,5)
+    morphology_kernel_size: Tuple[int, int] = (5,5)
     min_contour_area: int = 10000
     min_radius: int = 50
     max_radius: int = 400
@@ -79,7 +79,7 @@ class Camera:
         # Camera morphology
         self.kernel = cv.getStructuringElement(
             cv.MORPH_ELLIPSE, 
-            self.detection_config.morphology_kernal_size
+            self.detection_config.morphology_kernel_size
             )
         
         # Threading safety
@@ -210,6 +210,9 @@ class Camera:
                 ball = self._detect_ball(processed, frame)                
                 
                 with self._lock:
+                    if not self._running:
+                        break
+                    
                     self._latest_frame = frame
                     self._frame_timestamp = timestamp
                 
@@ -312,7 +315,7 @@ class Camera:
                 continue
             
             # Visualize if enabled
-            if self.enable_visualization:
+            if self.enable_visualization and original_frame is not None:
                 center = (int(x), int(y))
                 cv.circle(original_frame, center, int(radius), (0, 0, 255), 3)
                 cv.circle(original_frame, center, 5, (255,0,0), -1)  # draw point at middle of ball
@@ -321,16 +324,16 @@ class Camera:
             if self._frame_count % 100 == 0:
                 logger.debug(f"Ball Detected at:  ({x:.1f}, {y:.1f}), r = {radius:.1f}")
                     
-                return BallPosition(
-                    x = x,
-                    y = y,
-                    radius = radius,
-                    timestamp = time.perf_counter()
-                )
+            return BallPosition(
+                x = x,
+                y = y,
+                radius = radius,
+                timestamp = time.perf_counter()
+            )
                 
         return None
 
-    def start(self):
+    def start(self) -> None:
         """Start camera capture thread"""
         if self._running:
             logger.warning("Camera already running")
@@ -346,7 +349,7 @@ class Camera:
         self._thread.start()
         logger.debug("Camera Thread Started")
         
-    def stop(self):
+    def stop(self) -> None:
         """Stop camera capture thread"""
         if not self._running:
             logger.debug("Camera thread not running, don't need to stop")
@@ -356,7 +359,7 @@ class Camera:
         self._running = False
         
         if self._thread is not None:
-            self._thread.join(timeout=2.0)
+            self._thread.join(timeout=3.0)
             if self._thread.is_alive():
                 logger.warning("Camera thread did not stop when asked")
         
@@ -364,7 +367,7 @@ class Camera:
 
     def _log_statistics(self) -> None:
         """Log camera performance"""
-        elapsed = time.perf_counter() - self_stats_start_time
+        elapsed = time.perf_counter() - self._stats_start_time
         fps = 100 / elapsed
         detection_rate = (self._detection_count / self._frame_count) * 100
         
@@ -373,7 +376,7 @@ class Camera:
             f"({self._detection_count}/{self._frame_count} frames)"
             )
         
-        self_stats_start_time = time.perf_counter()
+        self._stats_start_time = time.perf_counter()
 
     def get_latest_frame(self) -> Optional[Tuple[np.ndarray, float]]:
         """Thread safe way of generating latest frame
