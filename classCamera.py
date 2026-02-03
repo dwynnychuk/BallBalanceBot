@@ -375,6 +375,17 @@ class Camera:
         
         self_stats_start_time = time.perf_counter()
 
+    def get_latest_frame(self) -> Optional[Tuple[np.ndarray, float]]:
+        """Thread safe way of generating latest frame
+
+        Returns:
+            Tuple if (frame, timestamp) or None if no frame
+        """
+        with self._lock:
+            if self._latest_frame is None:
+                return None
+            return self._latest_frame.copy(), self._frame_timestamp
+
     def get_ball_position(self) -> Optional[BallPosition]:
         """Get latest ball position thread safely
 
@@ -451,18 +462,25 @@ class Camera:
         self.stop()
 
 if __name__ == "__main__":
-    cam = Camera()
-    cam.start()
-    try:
-        while True:
-            frame = cam._latest_frame
-            if frame is not None:
-                cv.imshow("frame", cam._latest_frame)
-                if cam.get_ball_position():
-                    pass
-            if cv.waitKey(1) & 0xFF == 27:
-                break
-    finally:
-        cam.stop()
-        cv.destroyAllWindows()
+    # Test with visualization
+    with Camera(enable_visualization = True) as cam:
+        logger.info("Camera test started")
+        
+        try:
+            while True:
+                frame_data = cam.get_latest_frame()
+                if frame_data is not None:
+                    frame, timestamp = frame_data
+                    cv.imshow("Camera Feed", frame)
+                    
+                    ball = cam.get_ball_position()
+                    if ball is not None:
+                        robot_pos = cam.get_ball_position_robot_frame()
+                        logger.info(f"Ball at {robot_pos[:2]}")
+                        
+                    if cv.waitKey(1) & 0xFF == 27:
+                        break
+                    
+        except KeyboardInterrupt:
+            logger.info("Interrupted by User")
             
