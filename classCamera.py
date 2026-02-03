@@ -97,9 +97,6 @@ class Camera:
         self._detection_count = 0
         self._stats_start_time = time.perf_counter()
         
-        self.t0 = time.perf_counter()  
-        self.tn1 = time.perf_counter() - 1
-        
         # Setup functions
         self._setup_camera()
             
@@ -333,30 +330,37 @@ class Camera:
                 
         return None
 
-    @property
-    def frame_age(self):
-        """How old is the latest frame?"""
-        if self._frame_timestamp is None:
-            return None
-        return time.perf_counter() - self._frame_timestamp
-    
-    @property
-    def ball_age(self) -> Optional[float]:
-        """How old is the latest ball detection"""
-        ball = self.get_ball_position()
-        if ball is None:
-            return None
-        return ball.age()
-
     def start(self):
-        self._thread = threading.Thread(None,target=self._capture_loop, daemon=True)
+        """Start camera capture thread"""
+        if self._running:
+            logger.warning("Camera already running")
+            return
+        
+        self._running = True
+        self._thread = threading.Thread(
+            None,
+            target = self._capture_loop,
+            daemon=True,
+            name = "CameraThread"
+            )
         self._thread.start()
         logger.debug("Camera Thread Started")
         
     def stop(self):
+        """Stop camera capture thread"""
+        if not self._running:
+            logger.debug("Camera thread not running, don't need to stop")
+            return
+        
+        logger.info("Stopping camera thread...")
         self._running = False
-        if self._is_pi_camera:
-            self.picam2.stop()
+        
+        if self._thread is not None:
+            self._thread.join(timeout=2.0)
+            if self._thread.is_alive():
+                logger.warning("Camera thread did not stop when asked")
+        
+        logger.info("Camera thread stopped")
 
     def _log_statistics(self) -> None:
         """Log camera performance"""
@@ -382,7 +386,22 @@ class Camera:
         x_cad = y_cam
         y_cad = -x_cam
         #logger.debug(f"X,Y Adjusted Ball Coords: [{x_cad}, {y_cad}]")
-        return [x_cad, y_cad, ball[2]]        
+        return [x_cad, y_cad, ball[2]]    
+    
+    @property
+    def frame_age(self):
+        """How old is the latest frame?"""
+        if self._frame_timestamp is None:
+            return None
+        return time.perf_counter() - self._frame_timestamp
+    
+    @property
+    def ball_age(self) -> Optional[float]:
+        """How old is the latest ball detection"""
+        ball = self.get_ball_position()
+        if ball is None:
+            return None
+        return ball.age()    
 
 if __name__ == "__main__":
     cam = Camera()
