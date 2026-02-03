@@ -384,15 +384,30 @@ class Camera:
         with self._lock:
             return self._latest_ball
 
-    def _adjust_ball_coordinate_frame(self, ball: list) -> list:
-        x_c = int(self.camera_config.resolution[0]/2)
-        y_c = int(self.camera_config.resolution[1]/2)
-        x_cam = ball[0] - x_c
-        y_cam = ball[1] - y_c
-        x_cad = y_cam
-        y_cad = -x_cam
-        #logger.debug(f"X,Y Adjusted Ball Coords: [{x_cad}, {y_cad}]")
-        return [x_cad, y_cad, ball[2]]    
+    def get_ball_position_camera_frame(self) -> Optional[List[float]]:
+        ball = self.get_ball_position()
+        if ball is None:
+            return None
+        
+        # Center coordinates
+        x_center = int(self.camera_config.resolution[0] / 2)
+        y_center = int(self.camera_config.resolution[1] / 2)
+        
+        x_cam = ball.x - x_center
+        y_cam = ball.y - y_center
+        
+        return [x_cam, y_cam, ball.radius]
+
+    def get_ball_position_robot_frame(self) -> Optional[List[float]]:
+        cam_pos = self.get_ball_position_camera_frame()
+        if cam_pos is None:
+            return None
+        
+        # Rotate 90 degrees CCW to map to robot frame
+        x_robot = cam_pos[1]
+        y_robot = -cam_pos[0]
+        
+        return [x_robot, y_robot, cam_pos[2]]  
     
     @property
     def frame_age(self) -> Optional[float]:
