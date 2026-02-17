@@ -1,14 +1,30 @@
 from logger import get_logger
 from math import sqrt, degrees, atan2
+from dataclasses import dataclass
 import classServo
 import time
 
 logger = get_logger(__name__)
 
+@dataclass
+class LinkLengths:
+    """
+    Robot link lengths in meters.
+    
+    L0: Origin to Arm 1 Base
+    L1: Arm 1 (Bottom) Length
+    L2: Arm 2 (Top) Length
+    L3: Plate radius
+    """
+    L0: float = 0.105
+    L1: float = 0.08
+    L2: float = 0.046
+    L3: float = 0.0935
+    
 class Robot:
-    def __init__(self):
-        # TODO populate with CAD, mechanical constants
-        self.L = [0.105, 0.08, 0.046, 0.0935]
+    def __init__(self, links: LinkLengths = None):
+        self.links = links if links is not None else LinkLengths()
+        
         logger.debug("Robot class initialized")
     
     def kinematics_inv(self, nVec: list[float], h: float) -> list[float]:
@@ -22,7 +38,7 @@ class Robot:
         Calculated Values
         bj: Ball joint
         """
-        L = self.L
+        L = self.links
         angle_offset = 90
         
         # reference position (theta 0)
