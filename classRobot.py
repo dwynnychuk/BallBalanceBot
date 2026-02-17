@@ -22,6 +22,10 @@ class LinkLengths:
     L3: float = 0.0935
     
 class Robot:
+    # CONSTANTS
+    _SQRT3: float = sqrt(3)
+    _ANGLE_OFFSET: float = 90.0
+    
     def __init__(self, links: LinkLengths = None):
         self.links = links if links is not None else LinkLengths()
         
@@ -39,7 +43,6 @@ class Robot:
         bj: Ball joint
         """
         L = self.links
-        angle_offset = 90
         
         # reference position (theta 0)
         A = (L[1] + L[2])/h
@@ -72,23 +75,23 @@ class Robot:
         
         # adjust for physical build (0 -> vertical)
         theta_raw_1 = degrees(atan2(pj1x-L[2], pj1z))
-        theta_1 = angle_offset - theta_raw_1
+        theta_1 = self._ANGLE_OFFSET - theta_raw_1
         
         
         # Arm 02
-        bj_denom_2 = sqrt(4*nVec[2]**2 + nVec[0]**2 + 3*nVec[1]**2 - 2*sqrt(3)*nVec[0]*nVec[1])
+        bj_denom_2 = sqrt(4*nVec[2]**2 + nVec[0]**2 + 3*nVec[1]**2 - 2*self._SQRT3*nVec[0]*nVec[1])
         bj2x = -(L[3]*nVec[2])/bj_denom_2
-        bj2y = (sqrt(3)*L[3]*nVec[2])/bj_denom_2
-        bj2z = h + ((nVec[0] - sqrt(3)*nVec[1])*L[3])/bj_denom_2
+        bj2y = (self._SQRT3*L[3]*nVec[2])/bj_denom_2
+        bj2z = h + ((nVec[0] - self._SQRT3*nVec[1])*L[3])/bj_denom_2
         
-        A_2 = (sqrt(3)*bj2y - 2*L[2] - bj2x)/bj2z
+        A_2 = (self._SQRT3*bj2y - 2*L[2] - bj2x)/bj2z
         B_2 = (bj2x**2 + bj2y**2 + bj2z**2 + L[1]**2 - L[0]**2 - L[2]**2)/(2*bj2z)
         C_2 = A_2**2 + 4
         D_2 = 2*(A_2*B_2 + 2*L[2])
         E_2 = B_2**2 + L[2]**2 - L[1]**2
         
         pj2x = (-D_2 - sqrt(D_2**2 - 4*C_2*E_2))/(2*C_2)
-        pj2y = -sqrt(3)*pj2x
+        pj2y = -self._SQRT3*pj2x
         pj2z = sqrt(L[1]**2 - 4*pj2x**2 - 4*L[2]*pj2x - L[2]**2)
         
         # check elbow up vs elbow down
@@ -97,23 +100,23 @@ class Robot:
             
         # adjust for physical build (0 -> vertical)
         theta_raw_2 = degrees(atan2((sqrt(pj2x**2 + pj2y**2) - L[2]), pj2z))
-        theta_2 = angle_offset - theta_raw_2
+        theta_2 = self._ANGLE_OFFSET - theta_raw_2
     
         
         # Arm 03
-        bj_denom_3 = sqrt(4*nVec[2]**2 + nVec[0]**2 + 2*sqrt(3)*nVec[0]*nVec[1] + 3*nVec[1]**2)
+        bj_denom_3 = sqrt(4*nVec[2]**2 + nVec[0]**2 + 2*self._SQRT3*nVec[0]*nVec[1] + 3*nVec[1]**2)
         bj3x = -(L[3]*nVec[2])/bj_denom_3
-        bj3y = -(sqrt(3)*L[3]*nVec[2])/bj_denom_3
-        bj3z = h + ((nVec[0] + sqrt(3)*nVec[1])*L[3])/bj_denom_3
+        bj3y = -(self._SQRT3*L[3]*nVec[2])/bj_denom_3
+        bj3z = h + ((nVec[0] + self._SQRT3*nVec[1])*L[3])/bj_denom_3
 
-        A_3 = -(bj3x + sqrt(3)*bj3y + 2*L[2])/bj3z
+        A_3 = -(bj3x + self._SQRT3*bj3y + 2*L[2])/bj3z
         B_3 = (bj3x**2 + bj3y**2 + bj3z**2 + L[1]**2 - L[0]**2 - L[2]**2)/(2*bj3z)
         C_3 = A_3**2 + 4
         D_3 = 2*(A_3*B_3 + 2*L[2])
         E_3 = B_3**2 + L[2]**2 - L[1]**2
         
         pj3x = (-D_3 - sqrt(D_3**2 - 4*C_3*E_3))/(2*C_3)
-        pj3y = sqrt(3)*pj3x
+        pj3y = self._SQRT3*pj3x
         pj3z = sqrt(L[1]**2 - 4*pj3x**2 - 4*L[2]*pj3x - L[2]**2)
         
         # check elbow up vs elbow down
@@ -122,7 +125,7 @@ class Robot:
             
         # adjust for physical build (0 -> vertical)
         theta_raw_3 = degrees(atan2((sqrt(pj3x**2 + pj3y**2) - L[2]),pj3z))
-        theta_3 = angle_offset - theta_raw_3
+        theta_3 = self._ANGLE_OFFSET - theta_raw_3
 
         thetas = [theta_1, theta_2, theta_3]
         #logger.debug(f"Raw Theta Values: {[theta_raw_1, theta_raw_2, theta_raw_3]}")
