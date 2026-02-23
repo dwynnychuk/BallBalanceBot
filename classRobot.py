@@ -2,8 +2,6 @@ from logger import get_logger
 from math import sqrt, degrees, atan2
 from dataclasses import dataclass
 from typing import List
-import classServo
-import time
 
 logger = get_logger(__name__)
 
@@ -21,6 +19,18 @@ class LinkLengths:
     L1: float = 0.08
     L2: float = 0.046
     L3: float = 0.0935
+    
+    def __post_init__(self):
+        """
+        Validates lengths for IK calculations
+
+        Raises:
+            ValueError: non-positive value detected
+        """
+        for name in ['L0', 'L1', 'L2', 'L3']:
+            value = getattr(self, name)
+            if value <= 0:
+                raise ValueError(f"{name} must be positive, got {value}")
     
 class Robot:
     # CONSTANTS
@@ -50,7 +60,7 @@ class Robot:
         """
         L = self.links
         
-        # TODO Validate inputs
+        self._validate_ik_inputs(normal_vector, height)
         
         reference_height = self._compute_reference_height(height)
         
@@ -62,6 +72,26 @@ class Robot:
         logger.debug(f"IK Solution: {[f'{t:.2f}' for t in thetas]}")
         
         return thetas
+    
+    def _validate_ik_inputs(self, 
+                            normal_vector: List[float], 
+                            height: float
+                            ) -> None:
+        """
+        Validate IK inputs before calculation
+
+        Args:
+            normal_vector (List[float]): platform normal vector
+            height (float): platform height
+
+        Raises:
+            ValueError: if inputs are invalid
+        """
+        if len(normal_vector) != 3:
+            raise ValueError(f"Normal vector must have 3 components, got {len(normal_vector)}")
+    
+        if height <= 0:
+            raise ValueError(f"Non-Positive value for height, got {height}")    
     
     def _compute_reference_height(self, 
                                   height: float
@@ -87,23 +117,38 @@ class Robot:
         D = 2*(A*B - (L.L1 + L.L2))
         E = B**2 + (L.L1 + L.L2)**2 - L.L0**2
         
-        # TODO value check here
-        PX = (-D + sqrt(D**2 - 4*C*E))/(2*C)
+        discriminant = D**2 - 4*C*E
+        self._check_discriminant(discriminant)
+        PX = (-D + sqrt(discriminant))/(2*C)
         reference_height = sqrt(L.L0**2 - (PX - (L.L1 + L.L2))**2)
         
         return reference_height
+    
+    def _check_discriminant(self, discriminant: float) -> None:
+        """Check discriminant to fail fast if no solution exists """
+        if discriminant < 0:
+            raise ValueError(f"No Solutions exist!")
     
     def _compute_arm_angle_1(self, 
                              n: List[float], 
                              h: float, 
                              reference_height: float
                              ) -> float:
+        """
+        Compute required arm angle for arm 1
+
+        Args:
+            n (list[float]): Platform normal vector [nx, ny, nz]
+            h (float): desired platform height
+            reference_height (float): reference position for elbow check
+
+        Returns:
+            float: required arm angle for arm 1
+        """
         L = self.links
         
         denom = sqrt(n[0]**2 + n[2]**2)
-        
-        # TODO value check on denominator
-        
+                
         # Ball Joint
         bj_x = (L.L3*n[2])/denom
         bj_y = 0
@@ -130,11 +175,21 @@ class Robot:
                              h: float,
                              reference_height: float
                              ) -> float:
+        """
+        Compute required arm angle for arm 2
+
+        Args:
+            n (list[float]): Platform normal vector [nx, ny, nz]
+            h (float): desired platform height
+            reference_height (float): reference position for elbow check
+
+        Returns:
+            float: required arm angle for arm 2
+        """
         L = self.links
         S3 = self._SQRT3
         
         denom = sqrt(4*n[2]**2 + n[0]**2 + 3*n[1]**2 - 2*S3*n[0]*n[1])
-        #TODO Check denominator value
         
         # Ball Joint
         bj_x = -(L.L3 * n[2]) / denom
@@ -165,12 +220,21 @@ class Robot:
                              h: float,
                              reference_height: float
                              ) -> float:
+        """
+        Compute required arm angle for arm 3
+
+        Args:
+            n (list[float]): Platform normal vector [nx, ny, nz]
+            h (float): desired platform height
+            reference_height (float): reference position for elbow check
+
+        Returns:
+            float: required arm angle for arm 3
+        """
         L = self.links
         S3 = self._SQRT3
         
-        # FIX FROM HERE
         denom = sqrt(4 * n[2]**2 + n[0]**2 + 2 * S3 * n[0] * n[1] + 3 * n[1]**2)
-        # TODO Check denominator here for error
         
         bj_x = -(L.L3*n[2]) / denom
         bj_y = -(S3*L.L3*n[2]) / denom
@@ -184,7 +248,7 @@ class Robot:
         
         pj_x = (-D - sqrt(D**2 - 4*C*E))/(2*C)
         pj_y = S3*pj_x
-        pj_z = sqrt(L[1]**2 - 4*pj_x**2 - 4*L[2]*pj_x - L[2]**2)
+        pj_z = sqrt(L.L1**2 - 4*pj_x**2 - 4*L.L2*pj_x - L.L2**2)
         
         # check elbow up vs elbow down
         if bj_z < reference_height:
