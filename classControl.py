@@ -22,8 +22,9 @@ class PIDState:
     prev_measurement: Optional[float] = None
 
 class PID:
-    """Dual axis PID controller for ball balancing robot
-    """
+    """Dual axis PID controller for ball balancing robot"""
+    _MAX_DT = 0.100 # 100ms
+    
     def __init__(
         self,
         gains: Optional[PIDGains] = None,
@@ -67,6 +68,10 @@ class PID:
             return (0.0, 0.0)
 
         dt = current_time - self.prev_time
+        
+        # Clamp dt to limit blowup
+        dt = min(dt, self._MAX_DT)
+        
         # Check dt
         if dt <= 0:
             logger.warning(f"Error: Invalid dt: {dt}, skipping control update")

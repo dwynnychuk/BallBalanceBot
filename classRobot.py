@@ -119,6 +119,7 @@ class Robot:
         
         discriminant = D**2 - 4*C*E
         self._check_discriminant(discriminant)
+        
         PX = (-D + sqrt(discriminant))/(2*C)
         reference_height = sqrt(L.L0**2 - (PX - (L.L1 + L.L2))**2)
         

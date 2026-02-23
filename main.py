@@ -13,21 +13,23 @@ logger = get_logger(__name__)
 
 def main(display: bool = False):
     NUM_SERVOS: int = 3    
-    CONTROL_HZ = 60
-    CONTROL_DT = 1/CONTROL_HZ
-    MAX_TILT_RAD = math.radians(13)
-    TILT_THRES = 1e-6
-    SETPOINT = [0,0]
-    DESIRED_HEIGHT = 0.13
+    CONTROL_HZ: int = 60
+    CONTROL_DT: float = 1/CONTROL_HZ
+    MAX_TILT_RAD: float = math.radians(13)
+    TILT_THRES: float = 1e-6
+    SETPOINT: list = [0,0]
+    DESIRED_HEIGHT: float = 0.13
+    BALL_TIMEOUT: float = 1.0
     
     servo_group: ServoGroup = classServo.init_servos(NUM_SERVOS)
     pid = classControl.PID()
     robot = classRobot.Robot()
     
     # Initial Conditions
-    last_update = time.perf_counter()
-    iteration = 0
-    latency_log = []
+    last_update: float = time.perf_counter()
+    iteration: int = 0
+    latency_log: list = []
+    platform_reset: bool = False
     
     with classCamera.Camera() as cam:
         logger.info("Camera class started")
@@ -47,8 +49,18 @@ def main(display: bool = False):
                     frame, timestamp = frame_data
                     
                 ball_age = cam.ball_age
-                if ball_age is not None and ball_age > 0.1:  # 100ms stale
-                    logger.warning(f"Stale ball data: {ball_age*1000:.0f}ms old")
+                if ball_age is None or ball_age > BALL_TIMEOUT:
+                    if not platform_reset:
+                        logger.warning(f"Ball lost for {BALL_TIMEOUT}s, Resetting Platform")
+                        servo_group.home_all()
+                        pid.reset()
+                        platform_reset = True
+                    continue
+                
+                if platform_reset:
+                    logger.info("Ball reacquired. Resuming control.")
+                    pid.reset()
+                    platform_reset = False
                     
                 if cam.enable_visualization and frame is not None:
                     if ball_age is not None:
