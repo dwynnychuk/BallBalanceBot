@@ -84,10 +84,10 @@ def main(display: bool = False):
                     if pid_norm < TILT_THRES:         # div/ 0. on startup
                         continue
                     
-                    nVec = [nx/pid_norm, ny/pid_norm, nz/pid_norm]
+                    normal_vector = [nx/pid_norm, ny/pid_norm, nz/pid_norm]
                     
                     # Inverse Kinematics
-                    thetas = robot.kinematics_inv(nVec, DESIRED_HEIGHT)
+                    thetas = robot.kinematics_inv(normal_vector, DESIRED_HEIGHT)
                     
                     # Rotate Servos
                     servo_group.apply_angles(thetas)

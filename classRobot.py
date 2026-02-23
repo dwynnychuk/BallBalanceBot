@@ -56,34 +56,10 @@ class Robot:
         
         theta_1 = self._compute_arm_angle_1(normal_vector, height, reference_height)
         theta_2 = self._compute_arm_angle_2(normal_vector, height, reference_height)
-        
-        # Arm 03
-        bj_denom_3 = sqrt(4*normal_vector[2]**2 + normal_vector[0]**2 + 2*self._SQRT3*normal_vector[0]*normal_vector[1] + 3*normal_vector[1]**2)
-        bj3x = -(L[3]*normal_vector[2])/bj_denom_3
-        bj3y = -(self._SQRT3*L[3]*normal_vector[2])/bj_denom_3
-        bj3z = height + ((normal_vector[0] + self._SQRT3*normal_vector[1])*L[3])/bj_denom_3
-
-        A_3 = -(bj3x + self._SQRT3*bj3y + 2*L[2])/bj3z
-        B_3 = (bj3x**2 + bj3y**2 + bj3z**2 + L[1]**2 - L[0]**2 - L[2]**2)/(2*bj3z)
-        C_3 = A_3**2 + 4
-        D_3 = 2*(A_3*B_3 + 2*L[2])
-        E_3 = B_3**2 + L[2]**2 - L[1]**2
-        
-        pj3x = (-D_3 - sqrt(D_3**2 - 4*C_3*E_3))/(2*C_3)
-        pj3y = self._SQRT3*pj3x
-        pj3z = sqrt(L[1]**2 - 4*pj3x**2 - 4*L[2]*pj3x - L[2]**2)
-        
-        # check elbow up vs elbow down
-        if bj3z < reference_height:
-            pj3z = -pj3z
-            
-        # adjust for physical build (0 -> vertical)
-        theta_raw_3 = degrees(atan2((sqrt(pj3x**2 + pj3y**2) - L[2]),pj3z))
-        theta_3 = self._ANGLE_OFFSET - theta_raw_3
+        theta_3 = self._compute_arm_angle_3(normal_vector, height, reference_height)
 
         thetas = [theta_1, theta_2, theta_3]
-        #logger.debug(f"Raw Theta Values: {[theta_raw, theta_raw_2, theta_raw_3]}")
-        #logger.debug(f"IK Solution: {thetas}")
+        logger.debug(f"IK Solution: {[f'{t:.2f}' for t in thetas]}")
         
         return thetas
     
@@ -160,6 +136,7 @@ class Robot:
         denom = sqrt(4*n[2]**2 + n[0]**2 + 3*n[1]**2 - 2*S3*n[0]*n[1])
         #TODO Check denominator value
         
+        # Ball Joint
         bj_x = -(L.L3 * n[2]) / denom
         bj_y = (S3 * L.L3 * n[2]) / denom
         bj_z = h + ((n[0] - S3 * n[1]) * L.L3) / denom
@@ -183,10 +160,40 @@ class Robot:
         theta_raw = degrees(atan2(radial - L.L2, pj_z))
         return self._ANGLE_OFFSET - theta_raw
     
-    def control_platform(self, desired_pose: list) -> None:
-        """control platform
-        desired pose to come from PID output and include normal vector as well as height"""
-        pass
+    def _compute_arm_angle_3(self,
+                             n: List[float],
+                             h: float,
+                             reference_height: float
+                             ) -> float:
+        L = self.links
+        S3 = self._SQRT3
+        
+        # FIX FROM HERE
+        denom = sqrt(4 * n[2]**2 + n[0]**2 + 2 * S3 * n[0] * n[1] + 3 * n[1]**2)
+        # TODO Check denominator here for error
+        
+        bj_x = -(L.L3*n[2]) / denom
+        bj_y = -(S3*L.L3*n[2]) / denom
+        bj_z = h + ((n[0] + S3 * n[1]) * L.L3) / denom
+
+        A = -(bj_x + S3 * bj_y + 2 * L.L2) / bj_z
+        B = (bj_x**2 + bj_y**2 + bj_z**2 + L.L1**2 - L.L0**2 - L.L2**2)/(2*bj_z)
+        C = A**2 + 4
+        D = 2*(A*B + 2*L.L2)
+        E = B**2 + L.L2**2 - L.L1**2
+        
+        pj_x = (-D - sqrt(D**2 - 4*C*E))/(2*C)
+        pj_y = S3*pj_x
+        pj_z = sqrt(L[1]**2 - 4*pj_x**2 - 4*L[2]*pj_x - L[2]**2)
+        
+        # check elbow up vs elbow down
+        if bj_z < reference_height:
+            pj_z = -pj_z
+            
+        # adjust for physical build (0 -> vertical)
+        radial = sqrt(pj_x**2 + pj_y**2)
+        theta_raw_3 = degrees(atan2(radial - L.L2,pj_z))
+        return self._ANGLE_OFFSET - theta_raw_3
     
 if __name__ == "__main__":
     robot = Robot()
