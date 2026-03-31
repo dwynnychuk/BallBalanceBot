@@ -19,11 +19,15 @@ Without camera display
 With camera display
 `python3 main.py --display`
 
+Camera Calibration (Only required once per system)
+`python3 cameraCalibration.py`
+
 ## RequirementsBallBalanceBot
 - numpy
 - opencv-python
 - matplotlib
-- adafruit-circuitpython-servokit
+- adafruit-circuitpython-servokit (Raspberry Pi Only)
+- picamera2 (Raspberry Pi Only)
 
 ## CAD
 - [3x] `arm_1_drive.step`
