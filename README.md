@@ -2,6 +2,8 @@
 ## Summary
 A 3-DOF robotic project that balances a ball in the center of a platform. 
 
+<img width="694" height="665" alt="CAD_ISO" src="https://github.com/user-attachments/assets/26ecefea-4fcb-4339-8aa5-2e4b908fbe63" />
+
 ## Structure
     .
     ├── main.py
@@ -11,7 +13,7 @@ A 3-DOF robotic project that balances a ball in the center of a platform.
     ├── classRobot.py
     ├── classServo.py
     └── logger.py
-
+    
 ## Usage
 Without camera display 
 `python3 main.py`
