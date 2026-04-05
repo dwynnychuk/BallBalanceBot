@@ -27,9 +27,11 @@ def main(display: bool = False):
     
     # Initial Conditions
     last_update: float = time.perf_counter()
+    last_ball_timestamp: float = time.perf_counter()
     iteration: int = 0
     latency_log: list = []
     platform_reset: bool = False
+    frame = None
     
     with classCamera.Camera() as cam:
         logger.info("Camera class started")
@@ -60,6 +62,7 @@ def main(display: bool = False):
                 if platform_reset:
                     logger.info("Ball reacquired. Resuming control.")
                     pid.reset()
+                    last_ball_timestamp = 0.0
                     platform_reset = False
                     
                 if cam.enable_visualization and frame is not None:
@@ -73,9 +76,19 @@ def main(display: bool = False):
                             )
                     cv.imshow("frame", cv.resize(frame, (640, 480)))                    
 
+                ball = cam.get_ball_position()
+                
+                if ball is None:
+                    continue
+                
+                if ball.timestamp <= last_ball_timestamp:
+                    # no new data - skip
+                    continue
+                
+                last_ball_timestamp = ball.timestamp
+
                 ball_pos = cam.get_ball_position_robot_frame()                    
                 if ball_pos is not None:
-                    
                     loop_start = time.perf_counter()
                                         
                     # Calculate tilt of platform
