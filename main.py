@@ -27,7 +27,7 @@ def main(display: bool = False):
     
     # Initial Conditions
     last_update: float = time.perf_counter()
-    last_ball_timestamp: float = time.perf_counter()
+    last_ball_timestamp: float = 0.0
     iteration: int = 0
     latency_log: list = []
     platform_reset: bool = False
@@ -102,14 +102,11 @@ def main(display: bool = False):
                     if tilt_mag > TILT_THRES:
                         nx = math.sin(tilt_x)
                         ny = math.sin(tilt_y)
-                        nz = math.cos(tilt_mag)
+                        nz = math.sqrt(max(0.0, 1.0 - nx**2 - ny**2))
                     else:
                         nx, ny, nz = 0.0, 0.0, 1.0
-                    pid_norm = math.sqrt(nx**2 + ny**2 + nz**2)
-                    if pid_norm < TILT_THRES:         # div/ 0. on startup
-                        continue
-                    
-                    normal_vector = [nx/pid_norm, ny/pid_norm, nz/pid_norm]
+
+                    normal_vector = [nx, ny, nz]
                     
                     # Inverse Kinematics
                     thetas = robot.kinematics_inv(normal_vector, DESIRED_HEIGHT)
