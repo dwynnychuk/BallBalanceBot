@@ -8,10 +8,10 @@ logger = get_logger(__name__)
 @dataclass 
 class PIDGains:
     """PID gains"""
-    kp: float = 0.004
+    kp: float = 0.0007
     ki: float = 0.0
-    kd: float = 0.0
-    alpha: float = 0.1
+    kd: float = 0.00038
+    alpha: float = 0.0
 
 @dataclass
 class PIDState:
