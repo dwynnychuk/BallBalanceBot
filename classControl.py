@@ -9,9 +9,9 @@ logger = get_logger(__name__)
 class PIDGains:
     """PID gains"""
     kp: float = 0.00016
-    ki: float = 0.0
-    kd: float = 0.00009
-    alpha: float = 0.1
+    ki: float = 0.0001
+    kd: float = 0.00011
+    alpha: float = 0.0
 
 @dataclass
 class PIDState:
@@ -28,8 +28,8 @@ class PID:
     def __init__(
         self,
         gains: Optional[PIDGains] = None,
-        deadband: float = 15.0,
-        max_integral: float = 100
+        deadband: float = 40.0,
+        max_integral: float = 800
     ):
         self.gains = gains if gains is not None else PIDGains()
         self.deadband = deadband
