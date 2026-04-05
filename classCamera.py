@@ -19,7 +19,7 @@ class CalibrationData:
 class CameraConfig:
     """Camera configuration parameters"""
     resolution: Tuple[int, int] = (1280, 720)
-    downscale_factor: float = 2.0
+    downscale_factor: float = 8.0
     target_fps: int = 60
     buffer_size: int = 1
 
@@ -28,7 +28,7 @@ class BallDetectionConfig:
     """Ball Detection Parameters"""
     hsv_lower: np.ndarray = None
     hsv_upper: np.ndarray = None
-    morphology_kernel_size: Tuple[int, int] = (5,5)
+    morphology_kernel_size: Tuple[int, int] = (3,3)
     min_contour_area: int = 10000
     min_radius: int = 50
     max_radius: int = 400
