@@ -131,7 +131,7 @@ class PID:
         state.error = error
         state.prev_measurement = measurement
         
-        logger.debug(f"PID OUTPUT {axis_name} AXIS: P: {out_p}, I: {out_i}, D: {out_d} -> Total: {output}")
+        logger.debug(f"PID OUTPUT {axis_name} AXIS: P: {out_p:.2f}, I: {out_i:.2f}, D: {out_d:.2f} -> Total: {output:.2f}")
         
         return output
     
