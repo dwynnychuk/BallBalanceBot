@@ -8,10 +8,10 @@ logger = get_logger(__name__)
 @dataclass 
 class PIDGains:
     """PID gains"""
-    kp: float = 0.00025
-    ki: float = 0.005
+    kp: float = 0.00016
+    ki: float = 0.0
     kd: float = 0.00009
-    alpha: float = 0.0
+    alpha: float = 0.1
 
 @dataclass
 class PIDState:
@@ -29,7 +29,7 @@ class PID:
         self,
         gains: Optional[PIDGains] = None,
         deadband: float = 15.0,
-        max_integral: float = 0.005
+        max_integral: float = 100
     ):
         self.gains = gains if gains is not None else PIDGains()
         self.deadband = deadband
@@ -110,10 +110,15 @@ class PID:
         
         if abs(error) < self.deadband:
             error = 0.0
-        
-        # Calculate integral term with windup clamping
-        state.integral += error * dt
-        state.integral = self._clamp(state.integral, -self.max_integral, self.max_integral)
+            state.integral *= 0.95 # Drain integral near center
+        else:
+            # Calculate integral term with windup clamping
+            state.integral += error * dt
+            state.integral = self._clamp(
+                state.integral, 
+                -self.max_integral, 
+                self.max_integral
+                )
         
         # Calculate derivative value with filtering
         if state.prev_measurement is not None:
@@ -131,7 +136,7 @@ class PID:
         state.error = error
         state.prev_measurement = measurement
         
-        logger.debug(f"PID OUTPUT {axis_name} AXIS: P: {out_p:.2f}, I: {out_i:.2f}, D: {out_d:.2f} -> Total: {output:.2f}")
+        logger.debug(f"PID OUTPUT {axis_name} AXIS: P: {out_p:.2f}, I: {out_i:.4f}, D: {out_d:.2f} -> Total: {output:.2f}")
         
         return output
     
