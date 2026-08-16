@@ -25,13 +25,20 @@ def test_rotate_absolute_in_range():
     servo = Servo(0, kit=None)
     
     result = servo.rotate_absolute(30)
-    pass
+    assert result == 60
+    assert servo.currentAngle == 60
 
 def test_rotate_absolute_below_range():
-    pass
+    servo = Servo(0, kit=None)
+    
+    result = servo.rotate_absolute(90)
+    assert result == servo.MIN_ANGLE
 
 def test_rotate_absolute_above_range():
-    pass
+    servo = Servo(0, kit=None)
+    
+    result = servo.rotate_absolute(-50)
+    assert result == servo.MAX_ANGLE
 
 def test_servo_hardware_error():
     with pytest.raises(RuntimeError):

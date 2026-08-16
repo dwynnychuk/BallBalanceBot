@@ -72,10 +72,10 @@ class Servo:
             #logger.debug(f"Moving Servo {self.id} to: IK Angle: {position} -> Servo Angle {servo_angle}")
             pass
             
+        self.currentAngle = servo_angle
         if self.kit:
             try:
                 self.kit.servo[self.id].angle = servo_angle
-                self.currentAngle = servo_angle
             except Exception as e:
                 raise ServoHardwareError(f"Servo: {self.id} failed to move") from e
         
