@@ -53,7 +53,7 @@ class Servo:
         """Rotates individual servo within MIN_ANGLE and MAX_ANGLE
 
         Args:
-            position (int): angular position of servo before any offset
+            position (float): angular position of servo before any offset
             
         Returns: 
             Angle of servo to know if demanded was achieved.

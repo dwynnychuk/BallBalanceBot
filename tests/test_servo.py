@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import MagicMock
-from classServo import Servo, ServoHardwareError
+from classServo import Servo, ServoHardwareError, ServoGroup
 
 def test_servo_init_defaults():
     servo = Servo(2, kit=None)
@@ -69,3 +69,66 @@ def test_initalize_servo_range():
     
     mock_hat.servo[0].set_pulse_width_range.assert_called_with(500,2500)
     mock_hat.servo[2].set_pulse_width_range.assert_called_with(500,2500)
+    
+def test_servo_group_home_all_updates_current_angle():
+    home_angle = 15
+    servo_0 = Servo(0, kit=None, home_angle=home_angle)
+    servo_1 = Servo(1, kit=None, home_angle=home_angle)
+    
+    servo_group = ServoGroup([servo_0, servo_1])
+    servo_group.home_all()
+    
+    assert servo_0.currentAngle == home_angle
+    
+def test_servo_group_home_all_updates_kit():
+    servo_0 = MagicMock()
+    servo_1 = MagicMock()
+    
+    servo_group = ServoGroup([servo_0, servo_1])
+    servo_group.home_all()
+    
+    servo_0.reset.assert_called_once()
+    servo_1.reset.assert_called_once()
+    
+def test_servo_group_rotate_all():
+    servo_0 = MagicMock()
+    servo_1 = MagicMock()
+    
+    servo_group = ServoGroup([servo_0, servo_1])
+    servo_group.rotate_all(30)
+    
+    servo_0.rotate_absolute.assert_called_once_with(30)
+    
+def test_servo_group_apply_angles_args_num():
+    servo_0 = MagicMock()
+    servo_1 = MagicMock()
+    
+    servo_group = ServoGroup([servo_0, servo_1])
+    
+    with pytest.raises(ValueError):
+        servo_group.apply_angles([10])
+    
+    with pytest.raises(ValueError):
+        servo_group.apply_angles([10,20,30])
+        
+def test_servo_group_apply_angles_calls_each_servo():
+    servo_0 = MagicMock()
+    servo_1 = MagicMock()
+    
+    servo_group = ServoGroup([servo_0, servo_1])
+    servo_group.apply_angles([10,20])
+    
+    servo_0.rotate_absolute.assert_called_once_with(10)
+    servo_1.rotate_absolute.assert_called_once_with(20)
+    
+def test_servo_group_apply_angles_returns():
+    servo_0 = MagicMock()
+    servo_1 = MagicMock()
+    
+    servo_0.rotate_absolute.return_value = 60
+    servo_1.rotate_absolute.return_value = 70
+    
+    servo_group = ServoGroup([servo_0, servo_1])
+    result = servo_group.apply_angles([30,20])
+    
+    assert result == [60,70]
