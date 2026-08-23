@@ -1,6 +1,9 @@
-import pytest
 from unittest.mock import MagicMock, patch
-from classServo import Servo, ServoHardwareError, ServoGroup, init_servos
+
+import pytest
+
+from classServo import Servo, ServoGroup, ServoHardwareError, init_servos
+
 
 def test_servo_init_defaults():
     servo = Servo(2, kit=None)

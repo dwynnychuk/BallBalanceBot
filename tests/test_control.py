@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import MagicMock
-from classControl import PID, PIDGains, PIDState
+from classControl import PID, PIDGains
 
 def test_pid_init_defaults():
     pid = PID()
