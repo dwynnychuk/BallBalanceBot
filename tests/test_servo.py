@@ -1,6 +1,6 @@
 import pytest
-from unittest.mock import MagicMock
-from classServo import Servo, ServoHardwareError, ServoGroup
+from unittest.mock import MagicMock, patch
+from classServo import Servo, ServoHardwareError, ServoGroup, init_servos
 
 def test_servo_init_defaults():
     servo = Servo(2, kit=None)
@@ -132,3 +132,13 @@ def test_servo_group_apply_angles_returns():
     result = servo_group.apply_angles([30,20])
     
     assert result == [60,70]
+    
+def test_init_servos_no_pi():
+    with patch("classServo.is_pi", False):
+        group = init_servos(3)
+        
+    assert isinstance(group, ServoGroup)
+    assert len(group.servos) == 3
+    for servo in group.servos:
+        assert servo.kit is None
+        assert servo.currentAngle == servo.home_angle
