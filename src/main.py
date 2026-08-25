@@ -4,12 +4,12 @@ import time
 
 import cv2 as cv
 
-import classCamera
-import classControl
-import classRobot
-import classServo
-from classServo import ServoGroup
+import camera
+import control
+import robot
+import servo
 from logger import get_logger
+from servo import ServoGroup
 
 logger = get_logger(__name__)
 
@@ -23,9 +23,9 @@ def main(display: bool = False):
     DESIRED_HEIGHT: float = 0.13
     BALL_TIMEOUT: float = 1.0
     
-    servo_group: ServoGroup = classServo.init_servos(NUM_SERVOS)
-    pid = classControl.PID()
-    robot = classRobot.Robot()
+    servo_group: ServoGroup = servo.init_servos(NUM_SERVOS)
+    pid = control.PID()
+    bot = robot.Robot()
     
     # Initial Conditions
     last_update: float = time.perf_counter()
@@ -35,7 +35,7 @@ def main(display: bool = False):
     platform_reset: bool = False
     frame = None
     
-    with classCamera.Camera() as cam:
+    with camera.Camera() as cam:
         logger.info("Camera class started")
         
         try:
@@ -111,7 +111,7 @@ def main(display: bool = False):
                     normal_vector = [nx, ny, nz]
                     
                     # Inverse Kinematics
-                    thetas = robot.kinematics_inv(normal_vector, DESIRED_HEIGHT)
+                    thetas = bot.kinematics_inv(normal_vector, DESIRED_HEIGHT)
                     
                     # Rotate Servos
                     servo_group.apply_angles(thetas)
