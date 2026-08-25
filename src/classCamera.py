@@ -1,11 +1,14 @@
-import cv2 as cv
 import os
-import numpy as np
 import threading
 import time
-from logger import get_logger
+from collections.abc import Generator
 from dataclasses import dataclass
-from typing import Optional, Tuple, List, Generator
+from typing import list, Tuple
+
+import cv2 as cv
+import numpy as np
+
+from logger import get_logger
 
 logger = get_logger(__name__)
 
@@ -50,14 +53,14 @@ class BallPosition:
     def age(self) -> float:
         return time.perf_counter() - self.timestamp
     
-    def to_list(self) -> List[float]:
+    def to_list(self) -> list[float]:
         return [self.x, self.y, self.radius]
 
 class Camera:
     def __init__(
         self,
-        camera_config: Optional[CameraConfig] = None,
-        detection_config: Optional[BallDetectionConfig] = None,
+        camera_config: CameraConfig | None = None,
+        detection_config: BallDetectionConfig | None = None,
         enable_visualization: bool = False
     ):
         """
@@ -89,7 +92,7 @@ class Camera:
         self._latest_ball = None
         
         # Threading Control
-        self._thread: Optional[threading.Thread] = None
+        self._thread: threading.Thread | None = None
         self._running: bool = False 
         
         # Statistics
@@ -113,7 +116,7 @@ class Camera:
 
         self._calibration = self._load_calibration_data()
             
-    def _load_calibration_data(self) -> Optional[CalibrationData]:
+    def _load_calibration_data(self) -> CalibrationData | None:
         """Load calibration data for the camera type being used
 
         Returns:
@@ -142,7 +145,7 @@ class Camera:
                     )
             )
 
-    def _get_camera_frames(self) -> Generator[Tuple[np.ndarray, float], None, None]:
+    def _get_camera_frames(self) -> Generator[Tuple[np.ndarray, float]]:
         """wrapper function to yield frames from proper source
 
         Yields:
@@ -153,7 +156,7 @@ class Camera:
         else:
             yield from self._get_webcam_frames()
     
-    def _get_pi_camera_frames(self) -> Generator[Tuple[np.ndarray, float], None, None]:
+    def _get_pi_camera_frames(self) -> Generator[Tuple[np.ndarray, float]]:
         """Get frames using raspberry pi camera
 
         Yields:
@@ -174,7 +177,7 @@ class Camera:
         finally:
             self._picam2.stop()
     
-    def _get_webcam_frames(self) -> Generator[Tuple[np.ndarray, float], None, None]:
+    def _get_webcam_frames(self) -> Generator[Tuple[np.ndarray, float]]:
         """Get frames using webcam
 
         Yields:
@@ -231,7 +234,7 @@ class Camera:
             logger.info("Camera frame stopped")
 
     def _process_frame(self, frame: np.ndarray) -> np.ndarray:
-        """"""
+        """Process frames for ball detection"""
         small_frame = cv.resize(frame, self.small_frame_size)
         
         if self._calibration is not None:
@@ -279,7 +282,7 @@ class Camera:
         self, 
         mask: np.ndarray, 
         original_frame = None
-        ) -> Optional[BallPosition]:
+        ) -> BallPosition | None:
         """_summary_
 
         Args:
@@ -378,7 +381,7 @@ class Camera:
         
         self._stats_start_time = time.perf_counter()
 
-    def get_latest_frame(self) -> Optional[Tuple[np.ndarray, float]]:
+    def get_latest_frame(self) -> Tuple[np.ndarray, float] | None:
         """Thread safe way of generating latest frame
 
         Returns:
@@ -389,7 +392,7 @@ class Camera:
                 return None
             return self._latest_frame.copy(), self._frame_timestamp
 
-    def get_ball_position(self) -> Optional[BallPosition]:
+    def get_ball_position(self) -> BallPosition | None:
         """Get latest ball position thread safely
 
         Returns:
@@ -398,7 +401,7 @@ class Camera:
         with self._lock:
             return self._latest_ball
 
-    def get_ball_position_camera_frame(self) -> Optional[List[float]]:
+    def get_ball_position_camera_frame(self) -> list[float] | None:
         """Get ball position in camera coordinate frame
 
         Returns:
@@ -417,7 +420,7 @@ class Camera:
         
         return [x_cam, y_cam, ball.radius]
 
-    def get_ball_position_robot_frame(self) -> Optional[List[float]]:
+    def get_ball_position_robot_frame(self) -> list[float]:
         """Get ball position in robot coordinate frame
             Robot frame is 90 degrees CCW from camera frame due to mechanical mode
             
@@ -435,7 +438,7 @@ class Camera:
         return [x_robot, y_robot, cam_pos[2]]  
     
     @property
-    def frame_age(self) -> Optional[float]:
+    def frame_age(self) -> float | None:
         """Get age of latest frame"""
         with self._lock:
             if self._frame_timestamp is None:
@@ -443,7 +446,7 @@ class Camera:
             return time.perf_counter() - self._frame_timestamp
     
     @property
-    def ball_age(self) -> Optional[float]:
+    def ball_age(self) -> float | None:
         """Get age of latest ball detection"""
         ball = self.get_ball_position()
         if ball is None:

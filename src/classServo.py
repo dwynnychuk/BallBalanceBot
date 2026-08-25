@@ -1,6 +1,7 @@
 import platform
-from logger import get_logger
 from time import sleep
+
+from logger import get_logger
 
 logger = get_logger(__name__)
 

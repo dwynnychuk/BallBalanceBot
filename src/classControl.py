@@ -1,7 +1,8 @@
-from logger import get_logger
-from dataclasses import dataclass
-from typing import Tuple, Optional
 import time
+from dataclasses import dataclass
+from typing import Tuple
+
+from logger import get_logger
 
 logger = get_logger(__name__)
 
@@ -19,7 +20,7 @@ class PIDState:
     error: float = 0.0
     velocity: float = 0.0
     integral: float = 0.0
-    prev_measurement: Optional[float] = None
+    prev_measurement: float | None = None
 
 class PID:
     """Dual axis PID controller for ball balancing robot"""
@@ -27,7 +28,7 @@ class PID:
     
     def __init__(
         self,
-        gains: Optional[PIDGains] = None,
+        gains: PIDGains | None = None,
         deadband: float = 40.0,
         max_integral: float = 800
     ):
@@ -38,7 +39,7 @@ class PID:
         self.state_x = PIDState()
         self.state_y = PIDState()
         
-        self.prev_time: Optional[float] = None
+        self.prev_time: float | None = None
         
         logger.debug("PID initialized: "
                      f"kp: {self.gains.kp}, "

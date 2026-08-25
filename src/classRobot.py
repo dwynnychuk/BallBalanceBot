@@ -1,7 +1,8 @@
-from logger import get_logger
-from math import sqrt, degrees, atan2
 from dataclasses import dataclass
-from typing import List
+from math import atan2, degrees, sqrt
+from typing import list
+
+from logger import get_logger
 
 logger = get_logger(__name__)
 
@@ -58,7 +59,6 @@ class Robot:
         Returns:
             list[float]: required servo angles [theta1, theta2, theta3]
         """
-        L = self.links
         
         self._validate_ik_inputs(normal_vector, height)
         
@@ -74,7 +74,7 @@ class Robot:
         return thetas
     
     def _validate_ik_inputs(self, 
-                            normal_vector: List[float], 
+                            normal_vector: list[float], 
                             height: float
                             ) -> None:
         """
@@ -128,10 +128,10 @@ class Robot:
     def _check_discriminant(self, discriminant: float) -> None:
         """Check discriminant to fail fast if no solution exists """
         if discriminant < 0:
-            raise ValueError(f"No Solutions exist!")
+            raise ValueError("No Solutions exist!")
     
     def _compute_arm_angle_1(self, 
-                             n: List[float], 
+                             n: list[float], 
                              h: float, 
                              reference_height: float
                              ) -> float:
@@ -172,7 +172,7 @@ class Robot:
         return self._ANGLE_OFFSET - theta_raw
         
     def _compute_arm_angle_2(self,
-                             n: List[float],
+                             n: list[float],
                              h: float,
                              reference_height: float
                              ) -> float:
@@ -217,7 +217,7 @@ class Robot:
         return self._ANGLE_OFFSET - theta_raw
     
     def _compute_arm_angle_3(self,
-                             n: List[float],
+                             n: list[float],
                              h: float,
                              reference_height: float
                              ) -> float:

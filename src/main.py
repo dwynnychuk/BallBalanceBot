@@ -1,13 +1,15 @@
+import argparse
+import math
+import time
+
+import cv2 as cv
+
 import classCamera
 import classControl
 import classRobot
 import classServo
 from classServo import ServoGroup
 from logger import get_logger
-import time
-import cv2 as cv
-import math
-import argparse
 
 logger = get_logger(__name__)
 
@@ -48,7 +50,7 @@ def main(display: bool = False):
                 
                 frame_data = cam.get_latest_frame()
                 if frame_data is not None:
-                    frame, timestamp = frame_data
+                    frame, _ = frame_data
                     
                 ball_age = cam.ball_age
                 if ball_age is None or ball_age > BALL_TIMEOUT:
