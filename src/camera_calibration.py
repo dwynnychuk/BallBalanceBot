@@ -14,9 +14,9 @@ class Calibration:
         self.nrow: int = 9
         self.ncol: int = 6
         
-        self.criteria: Tuple = (cv.TERM_CRITERIA_EPS + cv.TERM_CRITERIA_MAX_ITER, 30, 0.001)
+        self.criteria: tuple = (cv.TERM_CRITERIA_EPS + cv.TERM_CRITERIA_MAX_ITER, 30, 0.001)
         self.default_cal_num: int = 20
-        self.camera_fov: Tuple[int, int] = (1280, 720)
+        self.camera_fov: tuple[int, int] = (1280, 720)
         self.pi_camera_available: bool = False
         
         # see if running on raspberry pi

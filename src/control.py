@@ -1,6 +1,5 @@
 import time
 from dataclasses import dataclass
-from typing import Tuple
 
 from logger import get_logger
 
@@ -50,16 +49,16 @@ class PID:
         
     def compute_output(
         self, 
-        setpoint: Tuple[float, float], 
-        measurement: Tuple[float, float]
-        ) -> Tuple[float, float]:
+        setpoint: tuple[float, float], 
+        measurement: tuple[float, float]
+        ) -> tuple[float, float]:
         """
         Compute desired pose of platform
         
         Args:
         
         Returns:
-            Tuple of (x_out, y_out) PID controller for x and y axis
+            tuple of (x_out, y_out) PID controller for x and y axis
         """
         current_time = time.perf_counter()
         
@@ -141,11 +140,11 @@ class PID:
         
         return output
     
-    def _initialize_state(self, measurement: Tuple[float, float], current_time: float) -> None:
+    def _initialize_state(self, measurement: tuple[float, float], current_time: float) -> None:
         """Initialize state of PID controller
 
         Args:
-            measurement (Tuple[float, float]): Measured position
+            measurement (tuple[float, float]): Measured position
             current_time (float): Time of initialization
         """
         self.state_x.prev_measurement = measurement[0]
@@ -153,11 +152,11 @@ class PID:
         self.prev_time = current_time
         logger.debug("PID State initialized")
     
-    def _get_current_output(self) -> Tuple[float, float]:
+    def _get_current_output(self) -> tuple[float, float]:
         """Calculate and output current state of PID controller
 
         Returns:
-            Tuple[float, float]: PID output based on current state
+            tuple[float, float]: PID output based on current state
         """
         out_x = (self.gains.kp * self.state_x.error +
                  self.gains.ki * self.state_x.integral - 

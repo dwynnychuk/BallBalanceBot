@@ -1,4 +1,4 @@
-from classControl import PID, PIDGains
+from control import PID, PIDGains
 
 
 def test_pid_init_defaults():

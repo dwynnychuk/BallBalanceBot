@@ -3,7 +3,7 @@ import threading
 import time
 from collections.abc import Generator
 from dataclasses import dataclass
-from typing import list, Tuple
+from typing import list
 
 import cv2 as cv
 import numpy as np
@@ -21,7 +21,7 @@ class CalibrationData:
 @dataclass
 class CameraConfig:
     """Camera configuration parameters"""
-    resolution: Tuple[int, int] = (1280, 720)
+    resolution: tuple[int, int] = (1280, 720)
     downscale_factor: float = 8.0
     target_fps: int = 60
     buffer_size: int = 1
@@ -31,7 +31,7 @@ class BallDetectionConfig:
     """Ball Detection Parameters"""
     hsv_lower: np.ndarray = None
     hsv_upper: np.ndarray = None
-    morphology_kernel_size: Tuple[int, int] = (3,3)
+    morphology_kernel_size: tuple[int, int] = (3,3)
     min_contour_area: int = 10000
     min_radius: int = 50
     max_radius: int = 400
@@ -110,7 +110,7 @@ class Camera:
             self._is_pi_camera = True
             self._picam2 = Picamera2()
             logger.info("Using Raspberry PI Camera")
-        except:
+        except ImportError():
             self._is_pi_camera = False
             logger.info("Using Webcam")
 
@@ -145,22 +145,22 @@ class Camera:
                     )
             )
 
-    def _get_camera_frames(self) -> Generator[Tuple[np.ndarray, float]]:
+    def _get_camera_frames(self) -> Generator[tuple[np.ndarray, float]]:
         """wrapper function to yield frames from proper source
 
         Yields:
-            Tuple of (frame, timestamp)
+            tuple of (frame, timestamp)
         """
         if self._is_pi_camera:
             yield from self._get_pi_camera_frames()
         else:
             yield from self._get_webcam_frames()
     
-    def _get_pi_camera_frames(self) -> Generator[Tuple[np.ndarray, float]]:
+    def _get_pi_camera_frames(self) -> Generator[tuple[np.ndarray, float]]:
         """Get frames using raspberry pi camera
 
         Yields:
-            Tuple of (frame, timestamp)
+            tuple of (frame, timestamp)
         """
         config = self._picam2.create_video_configuration(
             main={"size": self.camera_config.resolution}, 
@@ -177,11 +177,11 @@ class Camera:
         finally:
             self._picam2.stop()
     
-    def _get_webcam_frames(self) -> Generator[Tuple[np.ndarray, float]]:
+    def _get_webcam_frames(self) -> Generator[tuple[np.ndarray, float]]:
         """Get frames using webcam
 
         Yields:
-            Tuple of (frame, timestamp)
+            tuple of (frame, timestamp)
         """
         cap = cv.VideoCapture(0)
         if not cap.isOpened():
@@ -227,7 +227,7 @@ class Camera:
                 if self._frame_count % 100 == 0:
                     self._log_statistics()
                     
-        except Exception as e:
+        except Exception as e: # noqa: BLE001 -- top-level thread guard
             logger.error(f"Camera _thread crashed: {e}")
         finally:
             cv.destroyAllWindows()
@@ -381,11 +381,11 @@ class Camera:
         
         self._stats_start_time = time.perf_counter()
 
-    def get_latest_frame(self) -> Tuple[np.ndarray, float] | None:
+    def get_latest_frame(self) -> tuple[np.ndarray, float] | None:
         """Thread safe way of generating latest frame
 
         Returns:
-            Tuple if (frame, timestamp) or None if no frame
+            tuple if (frame, timestamp) or None if no frame
         """
         with self._lock:
             if self._latest_frame is None:
