@@ -94,7 +94,7 @@ class PID:
                              dt: float,
                              axis_name: str
                              ) -> float:
-        """_summary_
+        """Compute output and set state for a single axis
 
         Args:
             setpoint (float): Desired position
