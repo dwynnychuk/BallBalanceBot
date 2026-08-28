@@ -1,3 +1,5 @@
+import time
+
 import pytest
 
 from control import PID, PIDGains, PIDState
@@ -67,10 +69,10 @@ def test_compute_axis_output_error_initial():
 def test_compute_axis_output_error_lessthan_deadband():
     gains = PIDGains(1,1,1)
     pid = PID(gains, 0.2, 800)
-    state = PIDState()
+    state = PIDState(integral=100)
     output = pid._compute_axis_output(1.0, 0.9, state, 0.01, "X")
     velocity = 0
-    integral = 0.0
+    integral = 95
     expected_output = (1*0) + (1*integral) - (1*velocity)
     
     assert state.error == pytest.approx(0.0)
@@ -91,3 +93,15 @@ def test_compute_axis_output_error_with_prev_measurement():
     assert state.velocity == pytest.approx(velocity)
     assert state.integral == pytest.approx(integral)
     assert output == pytest.approx(expected_output)
+    
+def test_initialize_state():
+    pid = PID()
+    pid.state_x = PIDState(prev_measurement=0.5)
+    pid.state_y = PIDState(prev_measurement=0.4)
+    now = time.perf_counter()
+    
+    pid._initialize_state(measurement=(0.3,0.3), current_time=now)
+
+    assert pid.prev_time == pytest.approx(now)
+    assert pid.state_x.prev_measurement == pytest.approx(0.3)
+    assert pid.state_y.prev_measurement == pytest.approx(0.3)    
