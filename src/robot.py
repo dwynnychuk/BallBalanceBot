@@ -1,6 +1,5 @@
 from dataclasses import dataclass
 from math import atan2, degrees, sqrt
-from typing import list
 
 from logger import get_logger
 

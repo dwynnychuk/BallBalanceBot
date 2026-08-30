@@ -105,3 +105,23 @@ def test_initialize_state():
     assert pid.prev_time == pytest.approx(now)
     assert pid.state_x.prev_measurement == pytest.approx(0.3)
     assert pid.state_y.prev_measurement == pytest.approx(0.3)    
+    
+def test_get_current_output():
+    gains = PIDGains(kp=1, ki=1, kd=1)
+    state_x = PIDState(error=0.1, velocity=0.7, integral=1.1)
+    state_y = PIDState(error=0.1, velocity=0.7, integral=1.1)
+    
+    pid = PID(gains=gains)
+    pid.state_x = state_x
+    pid.state_y = state_y
+    output = pid._get_current_output()
+    expected_output_x = -((1*0.1) + (1*1.1) - (1*0.7))
+    expected_output_y = (1*0.1) + (1*1.1) - (1*0.7)
+    
+    assert output[0] == pytest.approx(-output[1])
+    assert output[0] == pytest.approx(expected_output_x)
+    assert output[1] == pytest.approx(expected_output_y)
+    
+def test_compute_output():
+    pass
+    

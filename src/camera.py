@@ -3,7 +3,6 @@ import threading
 import time
 from collections.abc import Generator
 from dataclasses import dataclass
-from typing import list
 
 import cv2 as cv
 import numpy as np
