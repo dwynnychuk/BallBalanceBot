@@ -38,7 +38,7 @@ class Robot:
     _ANGLE_OFFSET: float = 90.0
     
     def __init__(self, 
-                 links: LinkLengths = None):
+                 links: LinkLengths | None = None):
         
         self.links = links if links is not None else LinkLengths()
         
