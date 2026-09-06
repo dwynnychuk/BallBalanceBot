@@ -55,7 +55,7 @@ def test_validate_ik_inputs_length_not_three():
 def test_validate_ik_inputs_height_zero():
     robot = Robot()
     with pytest.raises(ValueError):
-        robot._validate_ik_inputs([0.1, 0.2, 0.3, 0.4], 0)
+        robot._validate_ik_inputs([0.1, 0.2, 0.3], 0)
 
 def test_validate_ik_inputs_height_negative():
     robot = Robot()
@@ -89,3 +89,30 @@ def test_check_discriminant_is_zero():
 def test_check_discriminant_nominal():
     robot = Robot()
     robot._check_discriminant(0.1)
+    
+def test_arm_angles_equal_for_flat_plate():
+    robot = Robot()
+    normal = [0.0, 0.0, 1.0]
+    height = 0.15
+    ref_h = robot._compute_reference_height(height)
+
+    theta1 = robot._compute_arm_angle_1(normal, height, ref_h)
+    theta2 = robot._compute_arm_angle_2(normal, height, ref_h)
+    theta3 = robot._compute_arm_angle_3(normal, height, ref_h)
+
+    assert theta1 == pytest.approx(theta2)
+    assert theta2 == pytest.approx(theta3)
+    
+def test_compute_reference_height_baseline():
+    robot = Robot()
+    height = 0.15
+    ref_h = robot._compute_reference_height(height)
+    
+    assert ref_h == pytest.approx(0.0897458905)
+    
+def test_compute_unreachable_reference_height():
+    robot = Robot()
+    height = 0.2
+
+    with pytest.raises(ValueError):
+        robot._compute_reference_height(height=height)
