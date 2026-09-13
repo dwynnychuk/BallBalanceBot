@@ -109,7 +109,7 @@ class Camera:
             self._is_pi_camera = True
             self._picam2 = Picamera2()
             logger.info("Using Raspberry PI Camera")
-        except ImportError():
+        except ImportError:
             self._is_pi_camera = False
             logger.info("Using Webcam")
 
